@@ -102,8 +102,7 @@ class _Multion:
     def get(self):
         if self.token is None:
             raise Exception("You must log in before making API calls.")
-
-        headers = {'Authorization': f'Bearer {self.token}'}
+        headers = {'Authorization': f"Bearer {self.token['access_token']}"}
         url = "https://multion-api.fly.dev/sessions"
 
         response = requests.get(url, headers=headers)
