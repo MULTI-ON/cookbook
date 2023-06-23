@@ -8,7 +8,6 @@ from threading import Thread
 import json
 import time
 
-
 class _Multion:
     def __init__(self, token_file='multion_token.txt'):
         self.client_id = os.environ['MULTION_CLIENT_ID']
@@ -79,8 +78,6 @@ class _Multion:
         thread = Thread(target=app.run, kwargs={'port': 8000, 'ssl_context': 'adhoc', 'use_reloader': False})
         thread.start()
 
-
-
     def post(self, url, data, tabId=None):
         if self.token is None:
             raise Exception("You must log in before making API calls.")
@@ -91,9 +88,9 @@ class _Multion:
         if tabId is not None:
             url = f"https://multion-api.fly.dev/session/{tabId}"
         
+        print("running post")
         attempts = 0
         while attempts < 5:  # tries up to 5 times
-            print("running post")
             response = requests.post(url, json=data, headers=headers)
 
             if response.ok:  # checks if status_code is 200-400
@@ -115,7 +112,6 @@ class _Multion:
             print(f"Request failed with status code: {response.status_code}")
             print(f"Response text: {response.text}")
             raise Exception("Failed to get a valid response after 5 attempts")
-
 
     def get(self):
         if self.token is None:
