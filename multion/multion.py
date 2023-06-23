@@ -86,7 +86,7 @@ class _Multion:
 
         # If a tabId is provided, update the existing session
         if tabId is not None:
-            url = f"https://multion.fly.dev/session/{tabId}"
+            url = f"https://multion-api.fly.dev/session/{tabId}"
         print("running post")
         response = requests.post(url, json=data, headers=headers)
 
@@ -104,17 +104,17 @@ class _Multion:
             raise Exception("You must log in before making API calls.")
 
         headers = {'Authorization': f'Bearer {self.token}'}
-        url = "https://multion.fly.dev/sessions"
+        url = "https://multion-api.fly.dev/sessions"
 
         response = requests.get(url, headers=headers)
         return response.json()
 
     def new_session(self, data):
-        url = 'https://multion.fly.dev/sessions'
+        url = 'https://multion-api.fly.dev/sessions'
         return self.post(url, data)
     
     def update_session(self, tabId, data):
-        url = f"https://multion.fly.dev/session/{tabId}"
+        url = f"https://multion-api.fly.dev/session/{tabId}"
         return self.post(url, data)
     
     def list_sessions(self):
