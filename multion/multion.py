@@ -9,9 +9,13 @@ import json
 import time
 
 class _Multion:
-    def __init__(self, token_file='multion_token.txt'):
-        self.client_id = os.environ['MULTION_CLIENT_ID']
-        self.client_secret = os.environ['MULTION_CLIENT_SECRET']
+    def __init__(self, token_file='multion_token.txt', secrets_file='secrets.json'):
+        secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
+        with open(secrets_file, 'r') as f:
+            secrets = json.load(f)
+
+        self.client_id = secrets['MULTION_CLIENT_ID']
+        self.client_secret = secrets['MULTION_CLIENT_SECRET']
         self.token_file = token_file
         self.token = None
 
