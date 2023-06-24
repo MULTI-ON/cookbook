@@ -6,12 +6,16 @@ from flask import Flask, request
 from requests_oauthlib import OAuth2Session
 from threading import Thread
 import json
-
+import time
 
 class _Multion:
-    def __init__(self, token_file='multion_token.txt'):
-        self.client_id = os.environ['MULTION_CLIENT_ID']
-        self.client_secret = os.environ['MULTION_CLIENT_SECRET']
+    def __init__(self, token_file='multion_token.txt', secrets_file='secrets.json'):
+        secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
+        with open(secrets_file, 'r') as f:
+            secrets = json.load(f)
+
+        self.client_id = secrets['MULTION_CLIENT_ID']
+        self.client_secret = secrets['MULTION_CLIENT_SECRET']
         self.token_file = token_file
         self.token = None
 
@@ -81,23 +85,37 @@ class _Multion:
     def post(self, url, data, tabId=None):
         if self.token is None:
             raise Exception("You must log in before making API calls.")
-
+        
         headers = {'Authorization': f"Bearer {self.token['access_token']}"}
 
         # If a tabId is provided, update the existing session
         if tabId is not None:
             url = f"https://multion-api.fly.dev/session/{tabId}"
+        
         print("running post")
-        response = requests.post(url, json=data, headers=headers)
+        attempts = 0
+        while attempts < 5:  # tries up to 5 times
+            response = requests.post(url, json=data, headers=headers)
 
-        if response.ok:  # checks if status_code is 200-400
-            try:
-                return response.json()
-            except json.JSONDecodeError:
-                print("JSONDecodeError: The server didn't respond with valid JSON.")
-        else:
+            if response.ok:  # checks if status_code is 200-400
+                try:
+                    return response.json()["response"]["data"]
+                except json.JSONDecodeError:
+                    print("JSONDecodeError: The server didn't respond with valid JSON.")
+                
+                break # if response is valid then exit loop
+            
+            # If we've not returned by now, sleep before the next attempt
+            time.sleep(1)  # you may want to increase this value depending on the API
+
+            # Increment the attempts counter
+            attempts += 1
+        
+        # If we've exhausted all attempts and not returned, raise an error
+        if attempts == 5:
             print(f"Request failed with status code: {response.status_code}")
             print(f"Response text: {response.text}")
+            raise Exception("Failed to get a valid response after 5 attempts")
 
     def get(self):
         if self.token is None:
@@ -106,7 +124,7 @@ class _Multion:
         url = "https://multion-api.fly.dev/sessions"
 
         response = requests.get(url, headers=headers)
-        return response.json()
+        return response.json()["response"]["data"]
 
     def new_session(self, data):
         url = 'https://multion-api.fly.dev/sessions'
@@ -118,6 +136,12 @@ class _Multion:
     
     def list_sessions(self):
         return self.get()
+    
+    def refresh_token(self):
+        if os.path.exists("multion_token.txt"):
+            os.remove("multion_token.txt")
+        else:
+            print(f"No active session found. Access token has already been revoked.")
 
 # Create a Multion instance
 _multion_instance = _Multion()
@@ -136,7 +160,10 @@ def new_session(data):
     return _multion_instance.new_session(data)
 
 def update_session(tabId, data):
-    return _multion_instance.update_session(tabId,data)
+    return _multion_instance.update_session(tabId, data)
 
 def list_sessions():
     return _multion_instance.list_sessions()
+
+def refresh_token():
+    _multion_instance.refresh_token()
