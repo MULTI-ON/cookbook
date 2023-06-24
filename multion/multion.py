@@ -132,6 +132,12 @@ class _Multion:
     
     def list_sessions(self):
         return self.get()
+    
+    def refresh_token(self):
+        if os.path.exists("multion_token.txt"):
+            os.remove("multion_token.txt")
+        else:
+            print(f"No active session found. Access token has already been revoked.")
 
 # Create a Multion instance
 _multion_instance = _Multion()
@@ -150,7 +156,10 @@ def new_session(data):
     return _multion_instance.new_session(data)
 
 def update_session(tabId, data):
-    return _multion_instance.update_session(tabId,data)
+    return _multion_instance.update_session(tabId, data)
 
 def list_sessions():
     return _multion_instance.list_sessions()
+
+def refresh_token():
+    _multion_instance.refresh_token()
