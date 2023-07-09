@@ -18,15 +18,21 @@ class _Multion:
         self.client_secret = secrets['MULTION_CLIENT_SECRET']
         self.token_file = token_file
         self.token = None
+        self.refresh_url = 'https://auth.multion.ai/oauth2/token'
 
         # Try to load the token from the token file
-        if os.path.exists(self.token_file):
+        if os.path.exists(self.token_file) and os.path.getsize(self.token_file) > 0:  # check if file is not empty
             with open(self.token_file, 'r') as f:
-                self.token = f.read().strip()
+                try:
+                    self.token = json.load(f)
+                except json.JSONDecodeError:
+                    print("Error reading token from file. The file might be corrupted.")
+                    self.token = None
 
     def login(self):
         # If the token is already loaded, no need to log in again
         if self.token is not None:
+            print("Already logged in")
             return
 
         # OAuth endpoints
@@ -63,7 +69,7 @@ class _Multion:
 
                 # Save the token to the token file
                 with open(self.token_file, 'w') as f:
-                    f.write(self.token['access_token'])
+                    json.dump(self.token, f)  # save the token as JSON instead of a string
 
                 return "You can close this tab and return to the Jupyter notebook."
 
@@ -81,6 +87,29 @@ class _Multion:
         # Run the server in a separate thread
         thread = Thread(target=app.run, kwargs={'port': 8000, 'ssl_context': 'adhoc', 'use_reloader': False})
         thread.start()
+    
+    def refresh_token(self):
+        # OAuth endpoints
+        authorization_base_url = 'https://auth.multion.ai/oauth2/authorize'
+        token_url = 'https://auth.multion.ai/oauth2/token'
+        redirect_uri = 'https://localhost:8000/callback'
+
+        extra = {
+            'client_id': self.client_id,
+            'client_secret': self.client_secret,
+        }
+
+        def token_saver(token):
+            self.token = token
+
+            # Save the token to the token file
+            with open(self.token_file, 'w') as f:
+                f.write(self.token['access_token'])
+
+        client = OAuth2Session(self.client_id, token=self.token, auto_refresh_url=token_url, 
+                               auto_refresh_kwargs=extra, token_updater=token_saver)
+
+        client.refresh_token(token_url)
 
     def post(self, url, data, tabId=None):
         if self.token is None:
@@ -90,7 +119,7 @@ class _Multion:
 
         # If a tabId is provided, update the existing session
         if tabId is not None:
-            url = f"https://multion-api.fly.dev/session/{tabId}"
+            url = f"https://multion-api.fly.dev/sessions/{tabId}"
         
         print("running post")
         attempts = 0
@@ -104,6 +133,12 @@ class _Multion:
                     print("JSONDecodeError: The server didn't respond with valid JSON.")
                 
                 break # if response is valid then exit loop
+            elif response.status_code == 401:  # token has expired
+                print("Invalid token. Refreshing...")
+                self.refresh_token()  # Refresh the token
+                headers['Authorization'] = f"Bearer {self.token['access_token']}"  # Update the authorization header
+                continue
+                
             
             # If we've not returned by now, sleep before the next attempt
             time.sleep(1)  # you may want to increase this value depending on the API
@@ -121,7 +156,7 @@ class _Multion:
         if self.token is None:
             raise Exception("You must log in before making API calls.")
         headers = {'Authorization': f"Bearer {self.token['access_token']}"}
-        url = "https://multion-api.fly.dev/sessions"
+        url = f"https://multion-api.fly.dev/sessions"
 
         response = requests.get(url, headers=headers)
         return response.json()["response"]["data"]
@@ -137,7 +172,7 @@ class _Multion:
     def list_sessions(self):
         return self.get()
     
-    def refresh_token(self):
+    def delete_token(self):
         if os.path.exists("multion_token.txt"):
             os.remove("multion_token.txt")
         else:
@@ -165,5 +200,5 @@ def update_session(tabId, data):
 def list_sessions():
     return _multion_instance.list_sessions()
 
-def refresh_token():
-    _multion_instance.refresh_token()
+def delete_token():
+    _multion_instance.delete_token()
