@@ -43,12 +43,12 @@ class Multion {
     this.refreshURL = "https://auth.multion.ai/oauth2/token";
 
 
-    console.log(existsSync(this.tokenFile) && statSync(this.tokenFile).size > 0);
+   
     // Try to load the token from the token file
     if (existsSync(this.tokenFile) && statSync(this.tokenFile).size > 0) {
       // check if file is not empty
       try {
-        this.token = readFileSync(this.tokenFile, "utf-8");
+        this.token = JSON.parse(readFileSync(this.tokenFile, "utf-8"));
       } catch (error) {
         console.log(
           "Error reading token from file. The file might be corrupted."
@@ -56,11 +56,9 @@ class Multion {
         this.token = null;
       }
     }
-    else{
-      this.login();
-    }
+   
   }
-  async login() {
+   async login() {
     // If the token is already loaded, no need to log in again
     if (this.token !== null) {
       console.log("Already logged in");
@@ -100,33 +98,37 @@ class Multion {
       console.log('Server listening on port 8000');
     });
   
-    // Handle the callback from the OAuth provider
-    app.get('/callback', async (req, res) => {
-      try {
-        const code = req.query.code;
+    // Wrap the callback handling in a promise for synchronous-like behavior
+    return new Promise((resolve, reject) => {
+      // Handle the callback from the OAuth provider
+      app.get('/callback', async (req, res) => {
+        try {
+          const code = req.query.code;
   
-        // Exchange the authorization code for an access token
-        const tokenParams = {
-          code,
-          redirect_uri: redirectUri,
-        };
-        const result = await oauth.getToken(tokenParams);
+          // Exchange the authorization code for an access token
+          const tokenParams = {
+            code,
+            redirect_uri: redirectUri,
+          };
+          const result = await oauth.getToken(tokenParams);
   
-        // Save the access token to the token file
-        this.token = result.token["id_token"];
-        writeFileSync(this.tokenFile, JSON.stringify(this.token).replace(/['"]+/g, ''));
-        this.token = JSON.stringify(this.token).replace(/['"]+/g, '')
+          // Save the access token to the token file
+          this.token = result.token;
+          writeFileSync(this.tokenFile, JSON.stringify(this.token));
   
-        console.log('Login successful!');
-      } catch (error) {
-        console.log('Error during login:', error.message);
-      } finally {
-        // Close the server
-        server.close();
-      }
+          console.log('Login successful!');
+          resolve('Login completed');
+        } catch (error) {
+          console.log('Error during login:', error.message);
+          reject(error);
+        } finally {
+          // Close the server
+          server.close();
+        }
   
-      // Redirect the user to a success page
-      res.send('<script>window.close()</script>');
+        // Redirect the user to a success page
+        res.send('<script>window.close()</script>');
+      });
     });
   }
   
@@ -136,7 +138,7 @@ class Multion {
       throw new Error("You must log in before making API calls.");
     }
 
-    let headers = { Authorization: `Bearer ${this.token.access_token}` };
+    let headers = { "Authorization": `Bearer ${this.token["access_token"]}`};
 
     // If a tabId is provided, update the existing session
     if (tabId !== null) {
@@ -145,10 +147,12 @@ class Multion {
 
     console.log("running post");
     let attempts = 0;
+
     while (attempts < 5) {
       // tries up to 5 times
       try {
-        const response = await _post(url, data, { headers });
+        const response = await axios.post(url, data, { headers });
+       
 
         if (response.status >= 200 && response.status < 400) {
           // checks if status_code is 200-400
@@ -157,14 +161,14 @@ class Multion {
           // token has expired
           console.log("Invalid token. Refreshing...");
           await this.refreshToken(); // Refresh the token
-          headers["Authorization"] = `Bearer ${this.token.access_token}`; // Update the authorization header
+          headers["Authorization"] = `Bearer JSON.stringify(${this.token.access_token}`; // Update the authorization header
           continue;
         }
       } catch (error) {
         console.log(
           `Request failed with status code: ${error.response.status}`
         );
-        console.log(`Response text: ${error.response.data}`);
+        console.log(`Response text: ${JSON.stringify(error.response.data)}`);
         throw new Error("Failed to get a valid response after 5 attempts");
       }
 
@@ -181,7 +185,8 @@ class Multion {
       throw new Error("You must log in before making API calls.");
     }
 
-    const headers = { Authorization: `Bearer ${this.token.access_token}` };
+
+    const headers = { Authorization: `Bearer ${this.token["access_token"]}` };
     const url = "https://multion-api.fly.dev/sessions";
 
     const response = await _get(url, { headers });
