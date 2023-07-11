@@ -1,4 +1,16 @@
-import { post as _post, get as _get } from "axios";
+import axios from 'axios';
+
+const _post = axios.post;
+const _get = axios.get;
+
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+
+const __dirname = path.dirname(__filename);
+
+
 import {
   existsSync,
   statSync,
@@ -10,8 +22,19 @@ import open from "open";
 import { spawn } from "child_process";
 import { join } from "path";
 
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+
+import simple_oauth2 from "simple-oauth2";
+const { AuthorizationCode } = simple_oauth2;
+import express from 'express';
+
+
+
+
 class Multion {
   constructor(tokenFile = "multion_token.txt", secretsFile = "secrets.json") {
+    
     this.secrets = require(`./${secretsFile}`);
     this.clientId = this.secrets.MULTION_CLIENT_ID;
     this.clientSecret = this.secrets.MULTION_CLIENT_SECRET;
@@ -19,15 +42,13 @@ class Multion {
     this.token = null;
     this.refreshURL = "https://auth.multion.ai/oauth2/token";
 
-    // Path to your Python interpreter and your Flask script
-    this.pythonPath = "python3";
-    this.scriptPath = join(__dirname, "multion.py");
 
+    console.log(existsSync(this.tokenFile) && statSync(this.tokenFile).size > 0);
     // Try to load the token from the token file
     if (existsSync(this.tokenFile) && statSync(this.tokenFile).size > 0) {
       // check if file is not empty
       try {
-        this.token = JSON.parse(readFileSync(this.tokenFile, "utf-8").trim());
+        this.token = readFileSync(this.tokenFile, "utf-8");
       } catch (error) {
         console.log(
           "Error reading token from file. The file might be corrupted."
@@ -35,45 +56,80 @@ class Multion {
         this.token = null;
       }
     }
+    else{
+      this.login();
+    }
   }
-
   async login() {
     // If the token is already loaded, no need to log in again
     if (this.token !== null) {
       console.log("Already logged in");
       return;
     }
-
-    // Spawn a child process to run the Flask server
-    const flaskServer = spawn(this.pythonPath, [this.scriptPath]);
-
-    // Log any output from the Flask server
-    flaskServer.stdout.on("data", (data) => {
-      console.log(`Flask server output: ${data}`);
-    });
-
-    // Log any error output from the Flask server
-    flaskServer.stderr.on("data", (data) => {
-      console.error(`Flask server error: ${data}`);
-    });
-
-    // Log when the Flask server process closes
-    flaskServer.on("close", (code) => {
-      console.log(`Flask server process exited with code ${code}`);
-    });
-
+  
     // OAuth endpoints
-    const authorizationBaseURL = "https://auth.multion.ai/oauth2/authorize";
-    const redirectURI = "http://localhost:8000/callback";
-
-    // Get the authorization URL
-    const authorizationURL = `${authorizationBaseURL}?response_type=code&client_id=${
-      this.clientId
-    }&redirect_uri=${encodeURIComponent(redirectURI)}`;
-
+    const authorizationBaseUrl = 'https://auth.multion.ai/oauth2/authorize';
+    const tokenUrl = 'https://auth.multion.ai/oauth2/token';
+    const redirectUri = 'http://localhost:8000/callback';
+  
+    // Create an OAuth2 session
+    const oauth = new AuthorizationCode({
+      client: {
+        id: this.clientId,
+        secret: this.clientSecret,
+      },
+      auth: {
+        authorizeHost: 'https://auth.multion.ai',
+        authorizePath: '/oauth2/authorize',
+        tokenHost: 'https://auth.multion.ai',
+        tokenPath: '/oauth2/token',
+      },
+    });
+  
+    // Generate the authorization URL
+    const authorizationUri = oauth.authorizeURL({
+      redirect_uri: redirectUri,
+    });
+  
     // Open the authorization URL in a new browser tab
-    await open(authorizationURL);
+    open(authorizationUri);
+  
+    // Create a temporary server to handle the callback
+    const app = express();
+    const server = app.listen(8000, () => {
+      console.log('Server listening on port 8000');
+    });
+  
+    // Handle the callback from the OAuth provider
+    app.get('/callback', async (req, res) => {
+      try {
+        const code = req.query.code;
+  
+        // Exchange the authorization code for an access token
+        const tokenParams = {
+          code,
+          redirect_uri: redirectUri,
+        };
+        const result = await oauth.getToken(tokenParams);
+  
+        // Save the access token to the token file
+        this.token = result.token["id_token"];
+        writeFileSync(this.tokenFile, JSON.stringify(this.token).replace(/['"]+/g, ''));
+        this.token = JSON.stringify(this.token).replace(/['"]+/g, '')
+  
+        console.log('Login successful!');
+      } catch (error) {
+        console.log('Error during login:', error.message);
+      } finally {
+        // Close the server
+        server.close();
+      }
+  
+      // Redirect the user to a success page
+      res.send('<script>window.close()</script>');
+    });
   }
+  
 
   async post(url, data, tabId = null) {
     if (this.token === null) {
@@ -185,3 +241,5 @@ class Multion {
 }
 
 export default Multion;
+// module.exports = Multion;
+
