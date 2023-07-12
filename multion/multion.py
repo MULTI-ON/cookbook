@@ -202,5 +202,3 @@ def list_sessions():
 
 def delete_token():
     _multion_instance.delete_token()
-
-    
