@@ -1,4 +1,4 @@
-"""Python agent."""
+"""MultiOn agent."""
 
 from typing import Any, Dict, Optional
 
@@ -11,7 +11,7 @@ from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import BaseCallbackManager
 from langchain.chains.llm import LLMChain
 from langchain.schema import SystemMessage
-from langchain.tools.multion import MultionClientTool
+from langchain.tools.multion.tool import MultionClientTool
 
 
 def create_multion_agent(
@@ -23,8 +23,9 @@ def create_multion_agent(
     prefix: str = PREFIX,
     agent_executor_kwargs: Optional[Dict[str, Any]] = None,
     **kwargs: Dict[str, Any],
+    
 ) -> AgentExecutor:
-    """Construct a python agent from an LLM and tool."""
+    """Construct a multion agent from an LLM and tool."""
     tools = [tool]
     agent: BaseSingleActionAgent
 
@@ -43,7 +44,7 @@ def create_multion_agent(
         agent = OpenAIFunctionsAgent(
             llm=llm,
             prompt=_prompt,
-            tools=tools,
+            tools=[tool],
             callback_manager=callback_manager,
             **kwargs,
         )
@@ -56,3 +57,4 @@ def create_multion_agent(
         verbose=verbose,
         **(agent_executor_kwargs or {}),
     )
+
