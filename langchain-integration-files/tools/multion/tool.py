@@ -12,7 +12,7 @@ from langchain.callbacks.manager import (
 from langchain.utilities.multion import MultionClientAPIWrapper
 
 class MultionClientTool(BaseModel):
-    """Simulates a Browser interacting agent."""
+    """Simulates a Browser inteeracting agent."""
     name = "Multion AI Extension Results in automated browser actions"
     description = (
         "A api to communicate with browser extension multion "
