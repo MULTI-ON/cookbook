@@ -4,6 +4,7 @@ from io import StringIO
 from typing import Dict, Optional,Any
 
 from pydantic import BaseModel, Field
+from langchain.tools.base import BaseTool
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForToolRun,
     CallbackManagerForToolRun,
@@ -11,21 +12,27 @@ from langchain.callbacks.manager import (
 
 from langchain.utilities.multion import MultionClientAPIWrapper
 
-class MultionClientTool(BaseModel):
-    """Simulates a Browser inteeracting agent."""
-    name = "Multion AI Extension Results in automated browser actions"
+
+
+def _get_default_multion_client() -> MultionClientAPIWrapper:
+    return MultionClientAPIWrapper()
+
+class MultionClientTool(BaseTool):
+    """Simulates a Browser interacting agent."""
+
+    name = "Multion_Client"
     description = (
         "A api to communicate with browser extension multion "
         "Useful for automating tasks and actions in the browser "
         "Input should be a task and a url."
         "The result is text form of action that was executed in the given url."
     )
-    api_wrapper: MultionClientAPIWrapper
+    api_wrapper: MultionClientAPIWrapper = Field(default_factory=_get_default_multion_client)
 
     def _run(
         self,
         task: str,
-        url: str = "www.google.com",
+        url: Optional[str] = "https://www.google.com/",
         tabId: Optional[Any] = None,
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> str:
@@ -35,7 +42,7 @@ class MultionClientTool(BaseModel):
     async def _arun(
         self,
         task: str,
-        url: str = "www.google.com",
+        url: str,
         tabId: Optional[Any] = None,
         run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
     ) -> str:

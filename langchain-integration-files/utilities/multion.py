@@ -3,7 +3,7 @@
 In order to set this up, follow instructions at:
 https://multion.notion.site/Download-MultiOn-ddddcfe719f94ab182107ca2612c07a5
 """
-from typing import Dict, List,Any
+from typing import Dict, List,Any, Optional
 
 
 import requests
@@ -47,37 +47,9 @@ class MultionClientAPIWrapper(BaseModel):
     In order to set this up, follow instructions at:
     NEED TO ADD
     """
-
-    multion_subscription_key: str
     client: Any = MultionAPI()
 
-    class Config:
-        """Configuration for this pydantic object."""
-
-        extra = Extra.forbid
-        arbitrary_types_allowed = False
-
-    @root_validator()
-    def validate_environment(cls, values: Dict) -> Dict:
-        """Validate that api key and python package exists in environment."""
-        try:
-            import multion
-        except ImportError:
-            raise ImportError(
-                "Could not import multion python package. "
-                "Please install it with `pip install multion`."
-            )
-        
-        """Attention required"""
-        client_id = get_from_dict_or_env(values, "client_id", "MULTION_CLIENT_ID")
-        auth_password = get_from_dict_or_env(values, "auth_password", "MULTION_CLIENT_PASSWORD")
-        values["from_number"] = get_from_dict_or_env(
-            values, "from_number", "TWILIO_FROM_NUMBER"
-        )
-        values["client"] = Client(account_sid, auth_token)
-        return values
-
-    def run(self, task: str, url: str,tabId:Any) -> str:
+    def run(self, task: str, url: str,tabId:Optional[Any]) -> str:
         """Run body through Multion Client and respond with action.
 
         Args:
@@ -86,6 +58,9 @@ class MultionClientAPIWrapper(BaseModel):
             tabId:
         """  
         if self.client.tabId == None or tabId==None :
+            self.client = MultionAPI()
+            print("test1")
+            print(task,url)
             message = self.client.create_session(task,url)
         else:
             message = self.client.update_session(task,url)
