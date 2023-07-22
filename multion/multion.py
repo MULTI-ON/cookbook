@@ -189,7 +189,7 @@ class _Multion:
         else:
             print(f"No active session found. Access token has already been revoked.")
 
-    def get_screenshot(self, response, height, width):
+    def get_screenshot(self, response, height=None, width=None):
         screenshot = response['screenshot']
 
         # Remove the "data:image/png;base64," part from the string
@@ -202,8 +202,22 @@ class _Multion:
         img_io = BytesIO(img_bytes)
         img = Image.open(img_io)
 
-        new_dimensions = (width, height)  # width, height
-        img = img.resize(new_dimensions)
+        # Get the original image dimensions
+        original_width, original_height = img.size
+
+        if height is not None and width is None:
+            # If only the height is provided, calculate the width while preserving the aspect ratio
+            width = int((height / original_height) * original_width)
+
+        elif width is not None and height is None:
+            # If only the width is provided, calculate the height while preserving the aspect ratio
+            height = int((width / original_width) * original_height)
+
+        # Resize the image if either dimension was provided
+        if height is not None and width is not None:
+            new_dimensions = (width, height)  # width, height
+            img = img.resize(new_dimensions, Image.LANCZOS)
+
         # Display the image in Jupyter Notebook
         display(img)
 
@@ -233,7 +247,7 @@ def list_sessions():
 def delete_token():
     _multion_instance.delete_token()
 
-def get_screenshot(response, height, width):
+def get_screenshot(response, height=None, width=None):
     return _multion_instance.get_screenshot(response, height, width)
 
 def refresh_token():
