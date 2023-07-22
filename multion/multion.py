@@ -137,7 +137,7 @@ class _Multion:
 
             if response.ok:  # checks if status_code is 200-400
                 try:
-                    return response.json()["response"]['data']
+                    return response.json()["response"]["data"]
                 except json.JSONDecodeError:
                     print("JSONDecodeError: The server didn't respond with valid JSON.")
                 
