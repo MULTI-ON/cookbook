@@ -146,12 +146,9 @@ class _Multion:
                 print("Invalid token. Refreshing...")
                 self.refresh_token()  # Refresh the token
                 headers['Authorization'] = f"Bearer {self.token['access_token']}"  # Update the authorization header
-                continue
             elif response.status_code == 404: #server not connected
                 print("Server Disconnected. Please press connect in the Multion extention popup")
-                continue
                 
-            
             # If we've not returned by now, sleep before the next attempt
             time.sleep(1)  # you may want to increase this value depending on the API
 
