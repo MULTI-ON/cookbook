@@ -9,6 +9,7 @@ from typing import List, Optional
 import pytz
 from dotenv import dotenv_values
 from langchain.agents import Tool, tool
+from langchain.tools import StructuredTool
 from langchain.docstore.document import Document
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.utilities.google_search import GoogleSearchAPIWrapper
@@ -271,8 +272,8 @@ TOOLS = {
         name="Google Maps Search",
         func=google_maps_search,
         description="""Use this for searching for restaurants on Google Maps. Examples:
-- Vietnamese restaurant SF
-- French Restaurants Lower East Side""",
+        - Vietnamese restaurant SF
+        - French Restaurants Lower East Side""",
         return_direct=True,
     ),
     # "store_reminder": Tool(

@@ -5,7 +5,8 @@ from typing import Any, Dict, List, Tuple, Union, Optional
 from dotenv import dotenv_values
 from langchain import OpenAI
 from langchain.chat_models import ChatOpenAI
-from langchain.agents import AgentExecutor, ConversationalAgent, Tool
+from langchain.agents import initialize_agent, AgentExecutor, ConversationalAgent, Tool
+from langchain.agents import AgentType
 from langchain.agents.tools import BaseTool, InvalidTool
 from langchain.chains.conversation.memory import ConversationBufferWindowMemory
 from langchain.callbacks.manager import CallbackManagerForChainRun
@@ -22,6 +23,25 @@ else:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
+class UserAgent(ConversationalAgent):
+
+    user: str = ""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def from_llm_and_tools(cls, *args, **kwargs):
+        agent = super().from_llm_and_tools(*args, **kwargs)
+        agent.user = kwargs.get("user", "")
+        return agent
+
+    def tool_run_logging_kwargs(self) -> Dict:
+        # tool_kwargs = super().tool_run_logging_kwargs()
+        tool_kwargs = {}
+        tool_kwargs["user"] = self.user
+        return tool_kwargs
+    
 def setup_sync_agent(buffer=None, **kwargs):
     if buffer is None:
         buffer = []
@@ -36,7 +56,7 @@ def setup_sync_agent(buffer=None, **kwargs):
         max_tokens=1000,
         model_name=OPENAI_MODEL_NAME,
     )
-    agent = ConversationalAgent.from_llm_and_tools(
+    agent = UserAgent.from_llm_and_tools(
         llm=llm,
         tools=tools,
         prefix=PREFIX,

@@ -25,8 +25,6 @@ preferences.
 Mion should inquire as to these preferences until a consensus is reached and then construct \
 a Google query by using the google_maps_search tool.
 
-Googling the restaurant is the ultimate goal of the assistant and once done, their life's work is completed.
-
 
 TOOLS:
 ------
