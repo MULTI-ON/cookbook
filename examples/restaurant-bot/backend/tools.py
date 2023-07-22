@@ -271,7 +271,7 @@ TOOLS = {
         name="Google Maps Search",
         func=google_maps_search,
         description="""Use this for searching for restaurants on Google Maps. Examples:
-- Vietnamese restaurant Hayes Valley
+- Vietnamese restaurant SF
 - French Restaurants Lower East Side""",
         return_direct=True,
     ),
