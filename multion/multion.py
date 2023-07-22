@@ -7,6 +7,10 @@ from requests_oauthlib import OAuth2Session
 from threading import Thread
 import json
 import time
+import base64
+from PIL import Image
+from io import BytesIO
+from IPython.display import display
 
 class _Multion:
     def __init__(self, token_file='multion_token.txt', secrets_file='secrets.json'):
@@ -89,7 +93,7 @@ class _Multion:
         thread.start()
     
     def refresh_token(self):
-        # OAuth endpoints
+    # OAuth endpoints
         authorization_base_url = 'https://auth.multion.ai/oauth2/authorize'
         token_url = 'https://auth.multion.ai/oauth2/token'
         redirect_uri = 'https://localhost:8000/callback'
@@ -107,9 +111,15 @@ class _Multion:
                 f.write(self.token['access_token'])
 
         client = OAuth2Session(self.client_id, token=self.token, auto_refresh_url=token_url, 
-                               auto_refresh_kwargs=extra, token_updater=token_saver)
+                            auto_refresh_kwargs=extra, token_updater=token_saver)
 
-        client.refresh_token(token_url)
+        try:
+            # Pass the old refresh token to refresh the access token
+            new_token = client.refresh_token(token_url, refresh_token=self.token['refresh_token'])
+            token_saver(new_token)
+        except Exception as e:
+            print(f"An error occurred while refreshing token: {str(e)}")
+
 
     def post(self, url, data, tabId=None):
         if self.token is None:
@@ -121,7 +131,6 @@ class _Multion:
         if tabId is not None:
             url = f"https://multion-api.fly.dev/sessions/{tabId}"
         
-        print("running post")
         attempts = 0
         while attempts < 5:  # tries up to 5 times
             response = requests.post(url, json=data, headers=headers)
@@ -137,6 +146,9 @@ class _Multion:
                 print("Invalid token. Refreshing...")
                 self.refresh_token()  # Refresh the token
                 headers['Authorization'] = f"Bearer {self.token['access_token']}"  # Update the authorization header
+                continue
+            elif response.status_code == 404: #server not connected
+                print("Server Disconnected. Please press connect in the Multion extention popup")
                 continue
                 
             
@@ -163,10 +175,12 @@ class _Multion:
 
     def new_session(self, data):
         url = 'https://multion-api.fly.dev/sessions'
+        print("running new session")
         return self.post(url, data)
     
     def update_session(self, tabId, data):
         url = f"https://multion-api.fly.dev/session/{tabId}"
+        print("session updated")
         return self.post(url, data)
     
     def list_sessions(self):
@@ -177,6 +191,25 @@ class _Multion:
             os.remove("multion_token.txt")
         else:
             print(f"No active session found. Access token has already been revoked.")
+
+    def get_screenshot(self, response, height, width):
+        screenshot = response['screenshot']
+
+        # Remove the "data:image/png;base64," part from the string
+        base64_img_bytes = screenshot.replace('data:image/png;base64,', '')
+
+        # Decode the base64 string back to bytes
+        img_bytes = base64.b64decode(base64_img_bytes)
+
+        # Create a BytesIO object and read the image bytes
+        img_io = BytesIO(img_bytes)
+        img = Image.open(img_io)
+
+        new_dimensions = (width, height)  # width, height
+        img = img.resize(new_dimensions)
+        # Display the image in Jupyter Notebook
+        display(img)
+
 
 # Create a Multion instance
 _multion_instance = _Multion()
@@ -202,3 +235,9 @@ def list_sessions():
 
 def delete_token():
     _multion_instance.delete_token()
+
+def get_screenshot(response, height, width):
+    return _multion_instance.get_screenshot(response, height, width)
+
+def refresh_token():
+    _multion_instance.refresh_token()
