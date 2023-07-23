@@ -1,4 +1,4 @@
-from .multion import _Multion, login, post, get, new_session, update_session, list_sessions, refresh_token
+from .multion import _Multion, login, post, get, new_session, update_session, list_sessions, refresh_token, get_screenshot, delete_token
 
 from importlib import metadata
 try:
