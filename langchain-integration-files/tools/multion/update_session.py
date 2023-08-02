@@ -8,13 +8,14 @@ from langchain.callbacks.manager import CallbackManagerForToolRun
 from langchain.tools.multion.base import MultionBaseTool
 
 import multion
+import json
 
 
 
 
 class UpdateSessionSchema(BaseModel):
     """Input for UpdateSessionTool."""
-    tabID:int = Field(
+    tabId:int = Field(
         ...,
         description="The tabID, received from one of the createSessions run before"
     )
@@ -23,47 +24,44 @@ class UpdateSessionSchema(BaseModel):
         description="The query to run in multion agent.",
     )
     url: str = Field(
-        "www.google.com",
-        description="The Url to run the agent at.",
+        "https://www.google.com/",
+        description="The Url to run the agent at. Note: accepts only secure links having https://",
     )
     
     
 
 
 class MultionUpdateSession(MultionBaseTool):
-    """
-   `MultionUpdateSession` is a function for AI bots to update existing browser sessions. It requires three parameters: `TabId` (mandatory), `query`, and `url`. The function performs the specified `query` action in the given `url`, defaulting to 'open' if `query` is not provided. It returns the updated `tabID` and the response, enabling reuse for future runs in a multion environment."""
-
-    name: str = "create_gmail_draft"
+    name: str = "update_multion_session"
     description: str = (
-        "Use this tool to create a new Multion Session with provided fields"
+        "Use this tool to update a existing corresponding Multion Browser Window with provided fields. Note:TabId is got from one of the previous Browser window creation."
     )
     args_schema: Type[UpdateSessionSchema] = UpdateSessionSchema
-    tabID:Any = None
+    tabId:Any = None
 
    
     def _run(
          self,
-         tabID:str,
+         tabId:str,
         query: str,
-        url: Optional[str] = "www.google.com",
+        url: Optional[str] = "https://www.google.com/",
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> dict:
         try:
             try:
-                response = multion.update_session(tabID,{"input": query,"url": url})
-                content =  {"tabID":tabID,"Response":response["message"]}
-                self.tabID = tabID
+                response = multion.update_session(tabId,{"input": query,"url": url})
+                content =  {"tabId":tabId,"Response":response["message"]}
+                self.tabId = tabId
                 return content
             except:
                  if(self.tabID!=None):
-                    response = multion.update_session(tabID,{"input": query,"url": url})
-                    content =  {"tabID":self.tabID,"Response":response["message"]}
+                    response = multion.update_session(tabId,{"input": query,"url": url})
+                    content =  {"tabId":self.tabId,"Response":response["message"]}
                     return content
                                      
                  else:
                     response = multion.new_session({"input": query,"url": url})
-                    self.tabID= response['tabID']
-                    return {"tabID":response['tabID'],"Response":response["message"]}
+                    self.tabID= response['tabId']
+                    return {"tabId":response['tabId'],"Response":response["message"]}
         except Exception as e:
             raise Exception(f"An error occurred: {e}")
