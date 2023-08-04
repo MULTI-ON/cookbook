@@ -5,7 +5,7 @@ from datetime import datetime
 from tkcalendar import Calendar
 from langchain import OpenAI
 from langchain.agents import initialize_agent, AgentType
-from langchain.agents.agent_toolkits import MultionToolkit
+from langchain.agents.agent_toolkits.multion.toolkit import MultionToolkit
 import multion
 from threading import *
 import time
@@ -105,7 +105,7 @@ class SchedulerApp:
         date_str = self.cal.get_date()
         h = self.hour_string.get()
         m = self.min_string.get()
-        print(f"Schedulting task: {name}")
+        print(f"Scheduling task: {name}")
         self.root.destroy()
         try:
             date_format = "%m/%d/%y %H:%M"
@@ -132,7 +132,7 @@ def show_tasks():
 import pystray
 from PIL import Image
 
-image = Image.open("dummy_logo.jpg")
+image = Image.open("dummy_logo.png")
 
 def login_multion():
     file_path = "multion_token.txt"

@@ -34,7 +34,7 @@ class UpdateSessionSchema(BaseModel):
 class MultionUpdateSession(MultionBaseTool):
     name: str = "update_multion_session"
     description: str = (
-        "Use this tool to update a existing corresponding Multion Browser Window with provided fields. Note:TabId is got from one of the previous Browser window creation."
+        "Use this tool to update a existing corresponding Multion Browser Window with provided fields. Note: TabId is got from one of the previous Browser window creation."
     )
     args_schema: Type[UpdateSessionSchema] = UpdateSessionSchema
     tabId:Any = None

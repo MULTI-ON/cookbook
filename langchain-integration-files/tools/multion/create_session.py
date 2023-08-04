@@ -30,7 +30,7 @@ class CreateSessionSchema(BaseModel):
 class MultionCreateSession(MultionBaseTool):
     name: str = "create_multion_session"
     description: str = (
-        "Use this tool to create a new Multion Browser Window with provided fields.Always the first step to run any activities that can be done using browser."
+        "Use this tool to create a new Multion Browser Window with provided fields. Always the first step to run any activities that can be done using browser."
     )
     args_schema: Type[CreateSessionSchema] = CreateSessionSchema
 
