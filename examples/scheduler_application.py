@@ -132,7 +132,7 @@ def show_tasks():
 import pystray
 from PIL import Image
 
-image = Image.open("dummy_logo.jpg")
+image = Image.open("icon-34.png")
 
 def login_multion():
     file_path = "multion_token.txt"
