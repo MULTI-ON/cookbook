@@ -252,3 +252,6 @@ def get_screenshot(response, height=None, width=None):
 
 def refresh_token():
     _multion_instance.refresh_token()
+
+def get_token():
+    return _multion_instance.token
