@@ -5,7 +5,7 @@ from datetime import datetime
 from tkcalendar import Calendar
 from langchain import OpenAI
 from langchain.agents import initialize_agent, AgentType
-from langchain.agents.agent_toolkits.multion.toolkit import MultionToolkit
+from langchain.agents.agent_toolkits import MultionToolkit
 import multion
 from threading import *
 import time
@@ -15,11 +15,12 @@ from tkinter import ttk
 from tkinter import messagebox
 from tkcalendar import Calendar
 from datetime import datetime
-import pystray
-from PIL import Image
 
 tasks = []
 FLAG = "START"
+
+
+
 def alert(task):
     global FLAG
     global tasks
@@ -131,6 +132,7 @@ class SchedulerApp:
         date_str = self.cal.get_date()
         h = self.hour_string.get()
         m = self.min_string.get()
+
         try:
             date_format = "%Y-%m-%d %H:%M"
             date_time = datetime.strptime(f"{date_str} {h}:{m}", date_format)
@@ -165,20 +167,13 @@ class TableApp:
             self.tree.column("Name", width=150)
             self.tree.column("Date", width=50)
             self.tree.column("Time", width=150)
-            for i, task in enumerate(tasks,1):
+            for i, task in enumerate(tasks):
                 self.tree.insert("", "end", iid=i, text=i, values=(task.name,task.date_time.strftime('%Y-%m-%d'), task.date_time.strftime('%H:%M')))
 
             self.tree.pack(padx=20, pady=10, fill=tk.BOTH, expand=True)
         else:
             no_tasks_label = ttk.Label(self.root, text="No Tasks Scheduled", font=("Helvetica", 18, "bold"))
             no_tasks_label.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
-
-
-
-
-
-
-image = Image.open("icon-34.png")
 
 
 def login_multion():
@@ -192,34 +187,74 @@ def login_multion():
     multion_login()
 
 
-def after_click(icon, query):
-    global tasks
-    global FLAG
-    if str(query) == "Add Task":
-        root = tk.Tk()
-        app = SchedulerApp(root)
-        root.mainloop()
-    elif str(query)== "Show Tasks":
-        root = tk.Tk()
-        app = TableApp(root)
-        root.mainloop()
-    elif str(query)== "Login to MultiOn":
-        login_multion()
-    elif str(query) == "Exit":
-        FLAG = "END"
-        icon.stop()
 
 
-icon = pystray.Icon("MultiOn Scheduler", image, "MultiOnScheduler",
-					menu=pystray.Menu(
-	pystray.MenuItem("Add Task",
-					after_click),
-	pystray.MenuItem("Show Tasks",
-					after_click),
-    pystray.MenuItem("Login to MultiOn",after_click),
-	pystray.MenuItem("Exit", after_click)))
 
-icon.run()
+
+
+import platform
+
+if platform.system() == "Darwin":
+    import rumps
+
+    class SchedulerApp(rumps.App):
+        def __init__(self):
+            super(SchedulerApp, self).__init__("Scheduler App")
+            self.menu = [
+                rumps.MenuItem("Add Task", callback=self.add_task),
+                rumps.MenuItem("Show Tasks", callback=self.show_tasks),
+                rumps.MenuItem("Login to MultiOn", callback=self.loginmultion),
+                rumps.MenuItem("Exit", callback=rumps.quit_application)]
+
+        def add_task(self, _):
+            root = tk.Tk()
+            app = SchedulerApp(root)
+            root.mainloop()
+        
+
+        def show_tasks(self, _):
+            root = tk.Tk()
+            app = TableApp(root)
+            root.mainloop()
+
+        
+        def loginmultion(self, _):
+            login_multion()
+    
+    SchedulerApp().run()
+else:
+    import pystray
+    from PIL import Image
+    image = Image.open("icon-34.png")
+    def after_click(icon, query):
+        global tasks
+        global FLAG
+        if str(query) == "Add Task":
+            root = tk.Tk()
+            app = SchedulerApp(root)
+            root.mainloop()
+        elif str(query)== "Show Tasks":
+            root = tk.Tk()
+            app = TableApp(root)
+            root.mainloop()
+        elif str(query)== "Login to MultiOn":
+            login_multion()
+        elif str(query) == "Exit":
+            FLAG = "END"
+            icon.stop()
+
+
+
+    icon = pystray.Icon("MultiOn Scheduler", image, "MultiOnScheduler",
+                        menu=pystray.Menu(
+        pystray.MenuItem("Add Task",
+                        after_click),
+        pystray.MenuItem("Show Tasks",
+                        after_click),
+        pystray.MenuItem("Login to MultiOn",after_click),
+        pystray.MenuItem("Exit", after_click)))
+
+    icon.run()
 
 
 
