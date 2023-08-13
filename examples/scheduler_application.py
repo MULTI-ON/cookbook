@@ -15,18 +15,17 @@ from tkinter import ttk
 from tkinter import messagebox
 from tkcalendar import Calendar
 from datetime import datetime
+import platform
+from multiprocessing import Process, Manager
 
-tasks = []
+#tasks = []
 FLAG = "START"
 
 
-
-def alert(task):
-    global FLAG
-    global tasks
+def alert(task, tasks):
     def call_multion(task,tasks):
         global FLAG
-        llm = OpenAI(temperature=0)
+        llm = OpenAI(temperature=0, openai_api_key="Your_OpenAI_Api_Key")
         toolkit = MultionToolkit()
         tools=toolkit.get_tools()
         agent = initialize_agent(
@@ -43,7 +42,8 @@ def alert(task):
             if current_time >= task.date_time:
                 print(task.description)
                 agent.run(task.description)
-                tasks.remove(task)
+                if tasks:
+                    tasks.remove(task)
                 break
     t1 = Thread(target=call_multion,args=(task,tasks))
     t1.start()
@@ -68,8 +68,8 @@ class Task:
 
 
 class SchedulerApp:
-    global tasks
-    def __init__(self, root):
+    def __init__(self, root, tasks):
+        self.tasks = tasks
         self.root = root
         self.root.title("Scheduler App")
         self.root.geometry("600x650")  # Adjust window dimensions
@@ -96,6 +96,20 @@ class SchedulerApp:
 
 
     def create_widgets(self):
+        # Background and foreground colors
+        bg_color = "#f5f5f5" # soft gray
+        fg_color = "#333333" # almost black
+        primary_color = "#3498db" # blue tone for primary actions
+        hover_color = "#2980b9"  # darker blue tone for hover
+
+        # Update styles
+        self.style.configure("TLabel", font=self.font_choice, background=bg_color, foreground=fg_color)
+        self.style.configure("TEntry", font=self.font_choice, background="#ffffff", foreground=fg_color)
+        self.style.configure("TCombobox", font=self.font_choice, background="#ffffff", foreground=fg_color, width=15)
+        self.style.configure("TSpinbox", font=self.font_choice, background="#ffffff", foreground=fg_color, width=2)
+        self.style.configure("TText", font=self.font_choice, background="#ffffff", foreground=fg_color, wrap="word")
+
+        # Create widgets
         ttk.Label(self.root, text="Task Name:", style="TLabel").pack(pady=10)
         self.entry_task_name = ttk.Entry(self.root, font=self.font_choice, style="TEntry")
         self.entry_task_name.pack()
@@ -111,19 +125,23 @@ class SchedulerApp:
         time_frame.pack(pady=10)
 
         ttk.Label(self.root, text="Description", style="TLabel").pack(pady=5)
-        self.text_area_task_description = tk.Text(self.root, width=60, height=10, font=self.font_choice, bg="#ecf0f1", wrap=tk.WORD)  # Adjust height and wrap
+        self.text_area_task_description = tk.Text(self.root, width=60, height=10, font=self.font_choice, bg="#ffffff", wrap=tk.WORD)
         self.text_area_task_description.pack(pady=10)
 
-        add_task_button = tk.Button(self.root, text="Add Task", command=self.add_task, relief=tk.FLAT, bg="#e74c3c", fg="white", font=self.font_choice, cursor="hand2")
+        add_task_button = tk.Button(self.root, text="Add Task", command=self.add_task, relief=tk.FLAT, bg=primary_color, fg=fg_color, font=self.font_choice, cursor="hand2")
         add_task_button.pack(pady=10)
-        add_task_button.bind("<Enter>", self.on_button_hover)
-        add_task_button.bind("<Leave>", self.on_button_leave)
+        add_task_button.bind("<Enter>", lambda e: add_task_button.config(bg=hover_color))
+        add_task_button.bind("<Leave>", lambda e: add_task_button.config(bg=primary_color))
+
 
     def on_button_hover(self, event):
         event.widget.config(bg="#d9534f")  # Change color on hover
 
     def on_button_leave(self, event):
         event.widget.config(bg="#e74c3c")  # Return to original color
+    
+    def sort_tasks(self, task):
+        return task.date_time
 
     def add_task(self):
         multion.login()
@@ -137,9 +155,16 @@ class SchedulerApp:
             date_format = "%Y-%m-%d %H:%M"
             date_time = datetime.strptime(f"{date_str} {h}:{m}", date_format)
             task = Task(name, date_time, description, "START")
-            tasks.append(task)
-            alert(task)
-            tasks.sort(key=lambda x: x.date_time)
+
+            # Add task to the Manager list
+            self.tasks.append(task)
+            
+            # Convert Manager list to regular list, sort it, and then update the Manager list
+            temp_tasks = list(self.tasks)
+            temp_tasks.sort(key=self.sort_tasks)
+            self.tasks[:] = temp_tasks  # Update the Manager list with sorted data
+            
+            alert(task, self.tasks)
             messagebox.showinfo("Success", "Task added successfully.")
         except ValueError:
             messagebox.showerror("Error", "Invalid date format. Please use YYYY-MM-DD HH:MM.")
@@ -148,26 +173,30 @@ class SchedulerApp:
 
 
 class TableApp:
-    global tasks
-    def __init__(self, root):
+    def __init__(self, root, tasks):
         self.root = root
         self.root.title("Scheduled Tasks")
-
+        self.tasks = tasks
         self.create_table()
 
     def create_table(self):
-        if tasks:
+        if not self.tasks:
+            no_tasks_label = ttk.Label(self.root, text="No Tasks Scheduled", font=("Helvetica", 18, "bold"))
+            no_tasks_label.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+            return
+        if self.tasks:
             self.tree = ttk.Treeview(self.root, columns=("Name", "Date", "Time"))
             self.tree.heading("#0", text="ID")
             self.tree.heading("Name", text="Name")
-            self.tree.heading("Date", text="Age")
-            self.tree.heading("Time", text="Country")
+            self.tree.heading("Date", text="Date")
+            self.tree.heading("Time", text="Time")
 
             self.tree.column("#0", width=50)
             self.tree.column("Name", width=150)
             self.tree.column("Date", width=50)
             self.tree.column("Time", width=150)
-            for i, task in enumerate(tasks):
+            for i in range(len(list(self.tasks))):
+                task = list(self.tasks)[i]
                 self.tree.insert("", "end", iid=i, text=i, values=(task.name,task.date_time.strftime('%Y-%m-%d'), task.date_time.strftime('%H:%M')))
 
             self.tree.pack(padx=20, pady=10, fill=tk.BOTH, expand=True)
@@ -187,42 +216,48 @@ def login_multion():
     multion_login()
 
 
-
-
-
-
-
-import platform
-
 if platform.system() == "Darwin":
     import rumps
 
-    class SchedulerApp(rumps.App):
-        def __init__(self):
-            super(SchedulerApp, self).__init__("Scheduler App")
+    def start_scheduler_app(tasks):
+        root = tk.Tk()
+        app = SchedulerApp(root, tasks)  # This is your tkinter-based SchedulerApp
+        root.mainloop()
+
+    def start_table_app(tasks):
+        root = tk.Tk()
+        app = TableApp(root, tasks)
+        root.mainloop()
+
+    class RumpsSchedulerApp(rumps.App):
+        def __init__(self, tasks):
+            super(RumpsSchedulerApp, self).__init__("Scheduler App",
+            icon="icon-34.png")
+            self.tasks = tasks
             self.menu = [
                 rumps.MenuItem("Add Task", callback=self.add_task),
                 rumps.MenuItem("Show Tasks", callback=self.show_tasks),
                 rumps.MenuItem("Login to MultiOn", callback=self.loginmultion),
-                rumps.MenuItem("Exit", callback=rumps.quit_application)]
+                rumps.MenuItem("Exit", callback=rumps.quit_application)
+            ]
 
         def add_task(self, _):
-            root = tk.Tk()
-            app = SchedulerApp(root)
-            root.mainloop()
-        
+            p = Process(target=start_scheduler_app, args=(self.tasks,))
+            p.start()
 
         def show_tasks(self, _):
-            root = tk.Tk()
-            app = TableApp(root)
-            root.mainloop()
+            p = Process(target=start_table_app,  args=(self.tasks,))
+            p.start()
 
-        
         def loginmultion(self, _):
             login_multion()
-    
-    SchedulerApp().run()
+
+    if __name__ == '__main__':
+        manager = Manager()
+        tasks = manager.list()
+        RumpsSchedulerApp(tasks).run()
 else:
+    tasks = []
     import pystray
     from PIL import Image
     image = Image.open("icon-34.png")
@@ -231,11 +266,11 @@ else:
         global FLAG
         if str(query) == "Add Task":
             root = tk.Tk()
-            app = SchedulerApp(root)
+            app = SchedulerApp(root, tasks)
             root.mainloop()
         elif str(query)== "Show Tasks":
             root = tk.Tk()
-            app = TableApp(root)
+            app = TableApp(root, tasks)
             root.mainloop()
         elif str(query)== "Login to MultiOn":
             login_multion()
