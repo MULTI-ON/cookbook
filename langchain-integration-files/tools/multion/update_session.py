@@ -1,23 +1,26 @@
-import base64
-from email.message import EmailMessage
-from typing import List, Optional, Type,Any
+from typing import TYPE_CHECKING, Optional, Type
 
 from pydantic import BaseModel, Field
-from enum import Enum
+
 from langchain.callbacks.manager import CallbackManagerForToolRun
-from langchain.tools.multion.base import MultionBaseTool
+from langchain.tools.base import BaseTool
 
-import multion
-import json
-
-
+if TYPE_CHECKING:
+    # This is for linting and IDE typehints
+    import multion
+else:
+    try:
+        # We do this so pydantic can resolve the types when instantiating
+        import multion
+    except ImportError:
+        pass
 
 
 class UpdateSessionSchema(BaseModel):
     """Input for UpdateSessionTool."""
-    tabId:int = Field(
-        ...,
-        description="The tabID, received from one of the createSessions run before"
+
+    tabId: str = Field(
+        ..., description="The tabID, received from one of the createSessions run before"
     )
     query: str = Field(
         ...,
@@ -25,43 +28,45 @@ class UpdateSessionSchema(BaseModel):
     )
     url: str = Field(
         "https://www.google.com/",
-        description="The Url to run the agent at. Note: accepts only secure links having https://",
+        description="""The Url to run the agent at. \
+        Note: accepts only secure links having https://""",
     )
-    
-    
 
 
-class MultionUpdateSession(MultionBaseTool):
+class MultionUpdateSession(BaseTool):
+    """Tool that updates an existing Multion Browser Window with provided fields.
+
+    Attributes:
+        name: The name of the tool. Default: "update_multion_session"
+        description: The description of the tool.
+        args_schema: The schema for the tool's arguments. Default: UpdateSessionSchema
+    """
+
     name: str = "update_multion_session"
-    description: str = (
-        "Use this tool to update a existing corresponding Multion Browser Window with provided fields. Note: TabId is got from one of the previous Browser window creation."
-    )
+    description: str = """Use this tool to update \
+an existing corresponding Multion Browser Window with provided fields. \
+Note: TabId must be received from previous Browser window creation."""
     args_schema: Type[UpdateSessionSchema] = UpdateSessionSchema
-    tabId:Any = None
+    tabId: str = ""
 
-   
     def _run(
-         self,
-         tabId:str,
+        self,
+        tabId: str,
         query: str,
         url: Optional[str] = "https://www.google.com/",
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> dict:
         try:
             try:
-                response = multion.update_session(tabId,{"input": query,"url": url})
-                content =  {"tabId":tabId,"Response":response["message"]}
+                response = multion.update_session(tabId, {"input": query, "url": url})
+                content = {"tabId": tabId, "Response": response["message"]}
                 self.tabId = tabId
                 return content
-            except:
-                 if(self.tabID!=None):
-                    response = multion.update_session(tabId,{"input": query,"url": url})
-                    content =  {"tabId":self.tabId,"Response":response["message"]}
-                    return content
-                                     
-                 else:
-                    response = multion.new_session({"input": query,"url": url})
-                    self.tabID= response['tabId']
-                    return {"tabId":response['tabId'],"Response":response["message"]}
+            except Exception as e:
+                print(f"{e}, retrying...")
+                return {"error": f"{e}", "Response": "retrying..."}
+                # response = multion.new_session({"input": query, "url": url})
+                # self.tabID = response["tabId"]
+                # return {"tabId": response["tabId"], "Response": response["message"]}
         except Exception as e:
             raise Exception(f"An error occurred: {e}")

@@ -1,16 +1,19 @@
-import base64
-from email.message import EmailMessage
-from typing import List, Optional, Type
+from typing import TYPE_CHECKING, Optional, Type
 
 from pydantic import BaseModel, Field
-from enum import Enum
+
 from langchain.callbacks.manager import CallbackManagerForToolRun
-from langchain.tools.multion.base import MultionBaseTool
+from langchain.tools.base import BaseTool
 
-import multion
-
-import json
-
+if TYPE_CHECKING:
+    # This is for linting and IDE typehints
+    import multion
+else:
+    try:
+        # We do this so pydantic can resolve the types when instantiating
+        import multion
+    except ImportError:
+        pass
 
 
 class CreateSessionSchema(BaseModel):
@@ -22,27 +25,34 @@ class CreateSessionSchema(BaseModel):
     )
     url: str = Field(
         "https://www.google.com/",
-        description="The Url to run the agent at. Note: accepts only secure links having https://",
+        description="""The Url to run the agent at. Note: accepts only secure \
+            links having https://""",
     )
-    
 
 
-class MultionCreateSession(MultionBaseTool):
+class MultionCreateSession(BaseTool):
+    """Tool that creates a new Multion Browser Window with provided fields.
+
+    Attributes:
+        name: The name of the tool. Default: "create_multion_session"
+        description: The description of the tool.
+        args_schema: The schema for the tool's arguments.
+    """
+
     name: str = "create_multion_session"
-    description: str = (
-        "Use this tool to create a new Multion Browser Window with provided fields. Always the first step to run any activities that can be done using browser."
-    )
+    description: str = """Create a new web browsing session based on a user's command or request. The command should include the full info required for the session. Also include an url (defaults to google.com if no better option) to start the session. \
+Use this tool to create a new Browser Window with provided fields. Always the first step to run \
+any activities that can be done using browser."""
     args_schema: Type[CreateSessionSchema] = CreateSessionSchema
 
-   
     def _run(
-         self,
+        self,
         query: str,
         url: Optional[str] = "https://www.google.com/",
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> dict:
         try:
-            response = multion.new_session({"input": query,"url": url})
-            return {"tabId":response["tabId"],"Response":response["message"]}
+            response = multion.new_session({"input": query, "url": url})
+            return {"tabId": response["tabId"], "Response": response["message"]}
         except Exception as e:
             raise Exception(f"An error occurred: {e}")
