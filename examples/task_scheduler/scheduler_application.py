@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import *
-from tkinter import messagebox
-from datetime import datetime
+from tkinter import messagebox, IntVar, StringVar
+from datetime import datetime, timedelta
 from tkcalendar import Calendar
 from langchain import OpenAI
 from langchain.agents import initialize_agent, AgentType
@@ -28,7 +28,7 @@ def alert(task, tasks):
         global FLAG
         llm = OpenAI(
             temperature=0,
-            openai_api_key="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",
+            openai_api_key="YOUR_OPENAI_API_KEY",
         )
         toolkit = MultionToolkit()
         agent = initialize_agent(
@@ -37,20 +37,38 @@ def alert(task, tasks):
             agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
             verbose=True,
         )
-        while True and task.FLAG == "START" and FLAG == "START":
+        while True and task.FLAG == "START" and FLAG == "START" and task.is_active:
             time.sleep(10)
-            # Get current time
+        # Get current time
             current_time = datetime.now()
-
+            
             if current_time >= task.date_time:
                 print(task.description)
                 agent.run(task.description)
+                
+                if task.repeat_type == "Daily":
+                    task.date_time += timedelta(days=1)
+                elif task.repeat_type == "Weekly":
+                    task.date_time += timedelta(weeks=1)
+                elif task.repeat_type == "Monthly":
+                    task.date_time += timedelta(days=30)
+                elif task.repeat_type == "Every 30 Seconds":
+                    task.date_time += timedelta(seconds=30)
+                elif task.repeat_type == "Every 1 Minute":
+                    task.date_time += timedelta(minutes=1)
+                elif task.repeat_type == "Hourly":
+                    task.date_time += timedelta(hours=1)
+                elif task.repeat_type == "Custom" and task.custom_repeat_interval:
+                    task.date_time += timedelta(days=task.custom_repeat_interval)
+                else:
+                    task.is_active = False  # Stop repeating if 'None' is selected
+
                 try:
                     if tasks:
                         tasks.remove(task)
                 except ValueError:
                     pass  # Task was already removed
-                break
+                # break
 
     t1 = Thread(target=call_multion, args=(task, tasks))
     t1.start()
@@ -68,22 +86,31 @@ def multion_login():
 
 
 class Task:
-    def __init__(self, name, date_time, description, FLAG):
+    def __init__(self, name, date_time, description, FLAG, repeat_type, custom_repeat_interval):
         self.name = name
         self.date_time = date_time
         self.description = description
         self.FLAG = "START"
+        self.repeat_type = repeat_type
+        self.custom_repeat_interval = custom_repeat_interval  # in days
+        self.is_active = True  # a flag to check if task is currently active or not
 
+    def stop(self):
+        self.is_active = False
 
 class SchedulerApp:
     def __init__(self, root, tasks):
         self.tasks = tasks
         self.root = root
         self.root.title("Scheduler App")
-        self.root.geometry("600x650")  # Adjust window dimensions
+        self.root.geometry("600x750")  # Adjust window dimensions
         self.hour_string = tk.StringVar()
         self.min_string = tk.StringVar()
         self.font_choice = ("Helvetica", 14)
+        self.repeat_var = StringVar()  # Variable for Repeat dropdown
+        self.repeat_var.set("None")  # Default value
+        self.custom_repeat_interval = IntVar()  # Variable for Custom Repeat entry
+        
 
         # Set time
         self.current_time = datetime.now()
@@ -167,7 +194,7 @@ class SchedulerApp:
             headersbackground=primary_color,  # Apple-like blue for headers
             headersforeground="white",  # Text color for headers
             weekendbackground="white",  # Background for weekends
-            weekendforeground="red",  # Text color for weekends
+            # weekendforeground="red",  # Text color for weekends
             normalbackground="white",  # Normal day background
             normalforeground="black",  # Normal day text color
             selectbackground="#007AFF",  # Selected day background color
@@ -178,15 +205,6 @@ class SchedulerApp:
         )
         for i in range(6):
             self.cal._week_nbs[i].destroy()
-        # # Adjust the row and column dimensions (if needed)
-        # for i in range(7):  # 7 days in a week
-        #     self.cal.grid_columnconfigure(
-        #         i, weight=1, minsize=50
-        #     )  # adjust minsize as needed
-        # for i in range(6):  # Up to 6 rows of days in a month
-        #     self.cal.grid_rowconfigure(
-        #         i, weight=1, minsize=50
-        #     )  # adjust minsize as needed
 
         self.cal.pack(pady=10)
 
@@ -216,6 +234,24 @@ class SchedulerApp:
             style="TSpinbox",
         ).pack(side=tk.LEFT, padx=5)
         time_frame.pack(pady=10)
+
+        # Repeat Dropdown Menu
+        repeat_label = ttk.Label(self.root, text="Repeat:", style="TLabel")
+        repeat_label.pack(pady=5)
+        repeat_options = ["None","Every 30 Seconds", "Every 1 Minute", "Hourly", "Daily", "Weekly", "Monthly", "Custom"]
+        repeat_menu = ttk.OptionMenu(self.root, self.repeat_var, *repeat_options)
+        repeat_menu.pack(pady=5)
+
+        # Custom Repeat Entry (hidden by default)
+        self.custom_repeat_frame = ttk.Frame(self.root)
+        custom_repeat_label = ttk.Label(self.custom_repeat_frame, text="Custom Repeat (Days):", style="TLabel")
+        custom_repeat_entry = ttk.Entry(self.custom_repeat_frame, textvariable=self.custom_repeat_interval, style="TEntry")
+        custom_repeat_label.pack(side=tk.LEFT, padx=5)
+        custom_repeat_entry.pack(side=tk.LEFT, padx=5)
+
+        # Check for changes in the "Repeat" dropdown menu
+        self.repeat_var.trace('w', self.update_custom_repeat_visibility)
+
 
         ttk.Label(self.root, text="Description", style="TLabel").pack(pady=5)
         self.text_area_task_description = tk.Text(
@@ -257,6 +293,13 @@ class SchedulerApp:
 
     def sort_tasks(self, task):
         return task.date_time
+    
+    def update_custom_repeat_visibility(self, *args):
+        """Show or hide the Custom Repeat entry based on the Repeat dropdown selection."""
+        if self.repeat_var.get() == "Custom":
+            self.custom_repeat_frame.pack(pady=5)
+        else:
+            self.custom_repeat_frame.pack_forget()
 
     def add_task(self):
         multion.login()
@@ -269,7 +312,9 @@ class SchedulerApp:
         try:
             date_format = "%Y-%m-%d %H:%M"
             date_time = datetime.strptime(f"{date_str} {h}:{m}", date_format)
-            task = Task(name, date_time, description, "START")
+            repeat_type = self.repeat_var.get()
+            custom_repeat_interval = self.custom_repeat_interval.get() if self.repeat_var.get() == "Custom" else None
+            task = Task(name, date_time, description, "START", repeat_type, custom_repeat_interval)
 
             # Add task to the Manager list
             self.tasks.append(task)
@@ -291,6 +336,8 @@ class TableApp:
     def __init__(self, root, tasks, refresh_rate=1000):  # Added refresh_rate
         self.root = root
         self.root.title("Scheduled Tasks")
+        self.root.geometry("700x150")  # Adjust window dimensions
+
         self.tasks = tasks
         self.last_task_count = len(self.tasks)
         self.refresh_rate = refresh_rate
