@@ -1,7 +1,11 @@
 # Introduction
-MultiOn Task Scheduler Desktop App
+**MultiOn Task Scheduler Desktop App**
 
-- You can add and schedule repetitive tasks that MultiOn will automatically execute in on your behalf everyday 🔥🚀
+You can add and schedule repetitive tasks that MultiOn will automatically execute in on your behalf everyday 🔥🚀
+
+# Installation
+1. `pip install -r requirements.txt`
+2. `python scheduler_application.py`
 
 # Contributing
 Contributions to the examples are encouraged. Please follow the contribution guidelines.
