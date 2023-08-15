@@ -2,7 +2,7 @@
 
 Welcome to the MultiOn API Repository 🚀
 
-The MultiOn API enables building custom AI agents & applications that need to take actions on the web as easy as a few lines of code.
+The MultiOn API enables building custom AI Agents & Applications that can take actions on the Web as easy as a few lines of code.
 
 See [Examples](https://github.com/MULTI-ON/api/tree/main/examples) to get started.
 
