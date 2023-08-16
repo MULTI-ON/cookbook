@@ -18,18 +18,26 @@ from datetime import datetime
 import platform
 from multiprocessing import Process, Manager
 import sv_ttk
+import tkinter as tk
+from tkinter import simpledialog
 
 # tasks = []
 FLAG = "START"
-
+OPENAI_API_KEY = None ### your openAPI KEY
 
 def alert(task, tasks):
+    global OPENAI_API_KEY
     def call_multion(task, tasks):
         global FLAG
-        llm = OpenAI(
-            temperature=0,
-            openai_api_key="YOUR_OPENAI_API_KEY",
-        )
+        if(OPENAI_API_KEY==None):
+            llm = OpenAI(
+                temperature=0,
+            )
+        else:
+            llm = OpenAI(
+                temperature=0,
+                openai_api_key= OPENAI_API_KEY,
+            )
         toolkit = MultionToolkit()
         agent = initialize_agent(
             tools=toolkit.get_tools(),
@@ -403,6 +411,49 @@ def login_multion():
         except OSError as e:
             print(f"Error occurred while removing the file: {e}")
     multion_login()
+
+
+
+
+class APIKeyInputDialog:
+    def __init__(self, parent):
+        self.parent = parent
+        self.parent.title("OpenAI API Key")
+
+        self.api_key = None
+        self.create_widgets()
+
+    def create_widgets(self):
+        self.label = tk.Label(self.parent, text="Enter your OpenAI API Key:")
+        self.label.pack(pady=10)
+
+        self.api_key_entry = tk.Entry(self.parent,)
+        self.api_key_entry.pack(pady=5)
+
+        self.ok_button = tk.Button(self.parent, text="OK", command=self.get_api_key)
+        self.ok_button.pack(pady=10)
+
+    def get_api_key(self):
+        api_key = self.api_key_entry.get()
+
+        if api_key:
+            self.api_key = api_key
+            self.parent.destroy()  # Close the main window
+        else:
+            messagebox.showerror("Error", "API key cannot be empty")
+
+def get_openai_api_key():
+    root = tk.Tk()
+    dialog = APIKeyInputDialog(root)
+    root.mainloop()
+    return dialog.api_key
+
+
+
+
+### Program Start
+
+OPENAI_API_KEY = get_openai_api_key()
 
 
 if platform.system() == "Darwin":
