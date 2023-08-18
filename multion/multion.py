@@ -12,7 +12,6 @@ from PIL import Image
 from io import BytesIO
 from IPython.display import display
 import cognitojwt
-import jwt
 
 class _Multion:
     def __init__(self, token_file='multion_token.txt', secrets_file='secrets.json'):
@@ -85,17 +84,12 @@ class _Multion:
             try:
                 # Get the authorization response from the request parameters
                 redirect_response = request.url
-                print("Redirect Response", redirect_response)
-                print("current state", self.state)
-                print(request.args.get('state'))
                 
                 if self.state != request.args.get('state'):
                     raise Exception('State mismatch: CSRF Warning!')
 
                 # Fetch the access token
-                print("token url: ", token_url)
                 self.token = oauth.fetch_token(token_url, client_secret=self.client_secret, authorization_response=redirect_response)
-                print("Token: ", self.token)
                 # Save the token to the token file
                 with open(self.token_file, 'w') as f:
                     json.dump(self.token, f)  # save the token as JSON instead of a string
