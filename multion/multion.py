@@ -55,9 +55,6 @@ class _Multion:
             if verified_claims:
                 print("Already logged in. Claims:", verified_claims)
                 return
-
-        if self.token is not None:
-            print(self.token)
                 
         # OAuth endpoints
         authorization_base_url = 'https://auth.multion.ai/oauth2/authorize'
