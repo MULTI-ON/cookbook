@@ -9,6 +9,8 @@ This folder contains examples demonstrating the use of the MULTI-ON API.
 # Usage
 To use these examples, clone the repository, install any necessary dependencies, and run the examples.
 
+**Minimum supported version of langchain to run the langchain examples: v0.0.265**
+
 # Contributing
 Contributions to the examples are encouraged. Please follow the contribution guidelines.
 
