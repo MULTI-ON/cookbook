@@ -9,6 +9,8 @@ See [Examples](https://github.com/MULTI-ON/api/tree/main/examples) to get starte
 
 ## Use
 We provide a Python and JS SDK to build on top of the MultiOn API and can directly be also used from [LangChain](https://python.langchain.com/docs/integrations/toolkits/multion).
+** Minimum supported version of langchain to run the langchain examples: v0.0.265 **
+
 
 
 ## Terms
