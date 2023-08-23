@@ -1,0 +1,12 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "target": "ESNext",
+    "module": "CommonJS",
+      "outDir": "./build/cjs",
+      "declaration": true,
+      "declarationMap": true,
+      "esModuleInterop": true
+    },
+  }
+  
