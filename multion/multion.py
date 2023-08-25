@@ -53,7 +53,7 @@ class _Multion:
         if self.token is not None:
             verified_claims = self.verify_cognito_token()
             if verified_claims:
-                print("Already logged in. Claims:", verified_claims)
+                # print("Already logged in. Claims:", verified_claims)
                 return
                 
         # OAuth endpoints
