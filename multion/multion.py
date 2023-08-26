@@ -11,6 +11,7 @@ import base64
 from PIL import Image
 from io import BytesIO
 from IPython.display import display
+import cognitojwt
 
 class _Multion:
     def __init__(self, token_file='multion_token.txt', secrets_file='secrets.json'):
@@ -20,6 +21,8 @@ class _Multion:
 
         self.client_id = secrets['MULTION_CLIENT_ID']
         self.client_secret = secrets['MULTION_CLIENT_SECRET']
+        self.user_pool_id = secrets['COGNITO_USER_POOL_ID']
+        self.region = secrets['AWS_REGION']
         self.token_file = token_file
         self.token = None
         self.refresh_url = 'https://auth.multion.ai/oauth2/token'
@@ -33,12 +36,26 @@ class _Multion:
                     print("Error reading token from file. The file might be corrupted.")
                     self.token = None
 
-    def login(self):
-        # If the token is already loaded, no need to log in again
-        if self.token is not None:
-            print("Already logged in")
-            return
+    def verify_cognito_token(self):
 
+        try:
+            verified_claims = cognitojwt.decode(
+                self.token['id_token'], self.region, self.user_pool_id
+            )
+            return verified_claims
+        except Exception as e:
+            # Token verification failed
+            print("Could not verify token: ", e)
+            return None
+
+
+    def login(self):
+        if self.token is not None:
+            verified_claims = self.verify_cognito_token()
+            if verified_claims:
+                # print("Already logged in. Claims:", verified_claims)
+                return
+                
         # OAuth endpoints
         authorization_base_url = 'https://auth.multion.ai/oauth2/authorize'
         token_url = 'https://auth.multion.ai/oauth2/token'
@@ -70,7 +87,6 @@ class _Multion:
 
                 # Fetch the access token
                 self.token = oauth.fetch_token(token_url, client_secret=self.client_secret, authorization_response=redirect_response)
-
                 # Save the token to the token file
                 with open(self.token_file, 'w') as f:
                     json.dump(self.token, f)  # save the token as JSON instead of a string
