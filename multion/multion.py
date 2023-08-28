@@ -82,17 +82,18 @@ class _Multion:
 
         # Get the authorization URL
         authorization_url, state = oauth.authorization_url(authorization_base_url)
-
         # Open the authorization URL in a new browser tab
         webbrowser.open(authorization_url)
 
         # Poll the server for the token
-        while True:
+        attempts = 0
+        while attempts < 5:
             data = self.get_token()
             if data:
                 self.token = data
                 self.save_token()  # Save the token after updating it
                 break
+            attempts +=1
             time.sleep(1)  # Wait before the next poll
 
     def register_client(self):
@@ -230,7 +231,7 @@ class _Multion:
             if "access_token" in data:
                 return data["access_token"]
             else:
-                print(f"Token not found, {data}")
+                # print(f"Token not found, {data}")
                 return None
         else:
             print("Failed to get token")
