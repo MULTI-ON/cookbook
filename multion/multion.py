@@ -215,6 +215,21 @@ class _Multion:
         print("session updated")
         return self.post(url, data)
 
+    def close_session(self, tabId):
+        if self.token is None:
+            raise Exception("You must log in before closing a session.")
+        headers = {"Authorization": f"Bearer {self.token['access_token']}"}
+        url = f"https://api.multion.ai/session/{tabId}"
+        response = requests.delete(url, headers=headers)
+
+        if response.ok:  # checks if status_code is 200-400
+            try:
+                return response.json()["response"]["data"]
+            except json.JSONDecodeError:
+                print("JSONDecodeError: The server didn't respond with valid JSON.")
+        else:
+            print(f"Failed to close session. Status code: {response.status_code}")
+
     def list_sessions(self):
         return self.get()
 
@@ -298,6 +313,10 @@ def new_session(data):
 
 def update_session(tabId, data):
     return _multion_instance.update_session(tabId, data)
+
+
+def close_session(tabId):
+    return _multion_instance.close_session(tabId)
 
 
 def list_sessions():
