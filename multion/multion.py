@@ -2,45 +2,58 @@
 import os
 import webbrowser
 import requests
-from flask import Flask, request
+from cryptography.fernet import Fernet
 from requests_oauthlib import OAuth2Session
-from threading import Thread
 import json
 import time
 import base64
 from PIL import Image
 from io import BytesIO
 from IPython.display import display
+
 import cognitojwt
 
+
 class _Multion:
-    def __init__(self, token_file='multion_token.txt', secrets_file='secrets.json'):
+    def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
+        self.token = None
+        self.token_file = token_file
+
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
-        with open(secrets_file, 'r') as f:
+        with open(secrets_file, "r") as f:
             secrets = json.load(f)
 
-        self.client_id = secrets['MULTION_CLIENT_ID']
-        self.client_secret = secrets['MULTION_CLIENT_SECRET']
-        self.user_pool_id = secrets['COGNITO_USER_POOL_ID']
-        self.region = secrets['AWS_REGION']
-        self.token_file = token_file
-        self.token = None
-        self.refresh_url = 'https://auth.multion.ai/oauth2/token'
+        self.multion_id = secrets["MULTION_CLIENT_ID"]
+        self.multion_secret = secrets["MULTION_CLIENT_SECRET"]
+        self.user_pool_id = secrets["COGNITO_USER_POOL_ID"]
+        self.region = secrets["AWS_REGION"]
+        self.refresh_url = "https://auth.multion.ai/oauth2/token"
 
-        # Try to load the token from the token file
-        if os.path.exists(self.token_file) and os.path.getsize(self.token_file) > 0:  # check if file is not empty
-            with open(self.token_file, 'r') as f:
-                try:
-                    self.token = json.load(f)
-                except json.JSONDecodeError:
-                    print("Error reading token from file. The file might be corrupted.")
-                    self.token = None
+        self.fernet_key = secrets.get("FERNET_KEY")
+        if self.fernet_key is None:
+            self.fernet_key = Fernet.generate_key().decode()
+            secrets["FERNET_KEY"] = self.fernet_key
+            with open(secrets_file, "w") as f:
+                json.dump(secrets, f, indent=4)
+
+        self.fernet_key = self.fernet_key.encode()
+        self.fernet = Fernet(self.fernet_key)
+
+        # Create a .multion directory in the user's home folder if it doesn't exist
+        self.home_dir = os.path.expanduser("~")
+        self.multion_dir = os.path.join(self.home_dir, ".multion")
+        if not os.path.exists(self.multion_dir):
+            os.makedirs(self.multion_dir)
+
+        self.token_file = os.path.join(self.multion_dir, "multion_token.enc")
+
+        # Load token if it exists
+        self.load_token()
 
     def verify_cognito_token(self):
-
         try:
             verified_claims = cognitojwt.decode(
-                self.token['id_token'], self.region, self.user_pool_id
+                self.token["id_token"], self.region, self.user_pool_id
             )
             return verified_claims
         except Exception as e:
@@ -48,105 +61,106 @@ class _Multion:
             print("Could not verify token: ", e)
             return None
 
-
     def login(self):
         if self.token is not None:
             verified_claims = self.verify_cognito_token()
             if verified_claims:
-                # print("Already logged in. Claims:", verified_claims)
+                print("Already logged in.")
                 return
-                
+
+        # Create a unique client id
+        self.client_id = self.register_client()
+
         # OAuth endpoints
-        authorization_base_url = 'https://auth.multion.ai/oauth2/authorize'
-        token_url = 'https://auth.multion.ai/oauth2/token'
-        redirect_uri = 'https://localhost:8000/callback'
+        authorization_base_url = "https://auth.multion.ai/oauth2/authorize"
+        redirect_uri = f"https://api.multion.ai/callback?client_id={self.client_id}"
 
         # Create an OAuth2 session
-        oauth = OAuth2Session(self.client_id, redirect_uri=redirect_uri)
+        oauth = OAuth2Session(self.multion_id, redirect_uri=redirect_uri)
 
         # Get the authorization URL
         authorization_url, state = oauth.authorization_url(authorization_base_url)
 
-        # Save the state so it can be verified in the callback
-        self.state = state
-
         # Open the authorization URL in a new browser tab
         webbrowser.open(authorization_url)
 
-        # Create a Flask app to handle the OAuth2 callback
-        app = Flask(__name__)
+        # Poll the server for the token
+        while True:
+            data = self.get_token()
+            if data:
+                self.token = data
+                self.save_token()  # Save the token after updating it
+                break
+            time.sleep(1)  # Wait before the next poll
 
-        @app.route("/callback")
-        def callback():
-            try:
-                # Get the authorization response from the request parameters
-                redirect_response = request.url
-                
-                if self.state != request.args.get('state'):
-                    raise Exception('State mismatch: CSRF Warning!')
+    def register_client(self):
+        response = requests.post("https://api.multion.ai/register_client")
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("client_id")
+        else:
+            raise Exception("Failed to register client")
 
-                # Fetch the access token
-                self.token = oauth.fetch_token(token_url, client_secret=self.client_secret, authorization_response=redirect_response)
-                # Save the token to the token file
-                with open(self.token_file, 'w') as f:
-                    json.dump(self.token, f)  # save the token as JSON instead of a string
+    def load_token(self):
+        if os.path.exists(self.token_file) and os.path.getsize(self.token_file) > 0:
+            with open(self.token_file, "rb") as f:
+                try:
+                    encrypted_token = f.read()
+                    decrypted_token = self.fernet.decrypt(encrypted_token).decode()
+                    self.token = json.loads(decrypted_token)
+                except json.JSONDecodeError:
+                    print("Error reading token from file. The file might be corrupted.")
+                    self.token = None
 
-                return "You can close this tab and return to the Jupyter notebook."
+    def save_token(self):
+        encrypted_token = self.fernet.encrypt(json.dumps(self.token).encode())
+        with open(self.token_file, "wb") as f:
+            f.write(encrypted_token)
 
-            except Exception as e:
-                return f"An error occurred: {e}"
-            
-        @app.get('/shutdown')
-        def shutdown():
-            shutdown_func = request.environ.get('werkzeug.server.shutdown')
-            if shutdown_func is None:
-                raise RuntimeError('Not running with the Werkzeug Server')
-            shutdown_func()
-            return 'Server shutting down...'
-
-        # Run the server in a separate thread
-        thread = Thread(target=app.run, kwargs={'port': 8000, 'ssl_context': 'adhoc', 'use_reloader': False})
-        thread.start()
-    
     def refresh_token(self):
-    # OAuth endpoints
-        authorization_base_url = 'https://auth.multion.ai/oauth2/authorize'
-        token_url = 'https://auth.multion.ai/oauth2/token'
-        redirect_uri = 'https://localhost:8000/callback'
+        # OAuth endpoints
+        token_url = "https://auth.multion.ai/oauth2/token"
 
         extra = {
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
+            "client_id": self.multion_id,
+            "client_secret": self.multion_secret,
         }
 
         def token_saver(token):
             self.token = token
 
-            # Save the token to the token file
-            with open(self.token_file, 'w') as f:
-                f.write(self.token['access_token'])
+            encrypted_token = self.fernet.encrypt(json.dumps(self.token).encode())
+            with open(self.token_file, "wb") as f:
+                f.write(encrypted_token)
 
-        client = OAuth2Session(self.client_id, token=self.token, auto_refresh_url=token_url, 
-                            auto_refresh_kwargs=extra, token_updater=token_saver)
+
+        client = OAuth2Session(
+            self.client_id,
+            token=self.token,
+            auto_refresh_url=token_url,
+            auto_refresh_kwargs=extra,
+            token_updater=token_saver,
+        )
 
         try:
             # Pass the old refresh token to refresh the access token
-            new_token = client.refresh_token(token_url, refresh_token=self.token['refresh_token'])
+            new_token = client.refresh_token(
+                token_url, refresh_token=self.token["refresh_token"]
+            )
             token_saver(new_token)
         except Exception as e:
             print(f"An error occurred while refreshing token: {str(e)}")
 
-
     def post(self, url, data, tabId=None):
         if self.token is None:
             raise Exception("You must log in before making API calls.")
-        
-        headers = {'Authorization': f"Bearer {self.token['access_token']}"}
+
+        headers = {"Authorization": f"Bearer {self.token['access_token']}"}
 
         # If a tabId is provided, update the existing session
         if tabId is not None:
-            url = f"https://multion-api.fly.dev/sessions/{tabId}"
-        
+            url = f"https://api.multion.ai/sessions/{tabId}"
+
         attempts = 0
         while attempts < 5:  # tries up to 5 times
             response = requests.post(url, json=data, headers=headers)
@@ -156,21 +170,25 @@ class _Multion:
                     return response.json()["response"]["data"]
                 except json.JSONDecodeError:
                     print("JSONDecodeError: The server didn't respond with valid JSON.")
-                
-                break # if response is valid then exit loop
+
+                break  # if response is valid then exit loop
             elif response.status_code == 401:  # token has expired
                 print("Invalid token. Refreshing...")
                 self.refresh_token()  # Refresh the token
-                headers['Authorization'] = f"Bearer {self.token['access_token']}"  # Update the authorization header
-            elif response.status_code == 404: #server not connected
-                print("Server Disconnected. Please press connect in the Multion extention popup")
-                
+                headers[
+                    "Authorization"
+                ] = f"Bearer {self.token['access_token']}"  # Update the authorization header
+            elif response.status_code == 404:  # server not connected
+                print(
+                    "Server Disconnected. Please press connect in the Multion extension popup"
+                )
+
             # If we've not returned by now, sleep before the next attempt
             time.sleep(1)  # you may want to increase this value depending on the API
 
             # Increment the attempts counter
             attempts += 1
-        
+
         # If we've exhausted all attempts and not returned, raise an error
         if attempts == 5:
             print(f"Request failed with status code: {response.status_code}")
@@ -180,36 +198,54 @@ class _Multion:
     def get(self):
         if self.token is None:
             raise Exception("You must log in before making API calls.")
-        headers = {'Authorization': f"Bearer {self.token['access_token']}"}
-        url = f"https://multion-api.fly.dev/sessions"
+        headers = {"Authorization": f"Bearer {self.token['access_token']}"}
+        url = "https://api.multion.ai/sessions"
 
         response = requests.get(url, headers=headers)
         return response.json()["response"]["data"]
 
     def new_session(self, data):
-        url = 'https://multion-api.fly.dev/sessions'
+        url = "https://api.multion.ai/sessions"
         print("running new session")
         return self.post(url, data)
-    
+
     def update_session(self, tabId, data):
-        url = f"https://multion-api.fly.dev/session/{tabId}"
+        url = f"https://api.multion.ai/session/{tabId}"
         print("session updated")
         return self.post(url, data)
-    
+
     def list_sessions(self):
         return self.get()
-    
+
+    def get_token(self):
+        if self.token is not None and self.token["expires_at"] > time.time():
+            return self.token
+
+        response = requests.get(
+            f"https://api.multion.ai/get_token?client_id={self.client_id}"
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if "access_token" in data:
+                return data["access_token"]
+            else:
+                print(f"Token not found, {data}")
+                return None
+        else:
+            print("Failed to get token")
+            return None
+
     def delete_token(self):
         if os.path.exists("multion_token.txt"):
             os.remove("multion_token.txt")
         else:
-            print(f"No active session found. Access token has already been revoked.")
+            print("No active session found. Access token has already been revoked.")
 
     def get_screenshot(self, response, height=None, width=None):
-        screenshot = response['screenshot']
+        screenshot = response["screenshot"]
 
         # Remove the "data:image/png;base64," part from the string
-        base64_img_bytes = screenshot.replace('data:image/png;base64,', '')
+        base64_img_bytes = screenshot.replace("data:image/png;base64,", "")
 
         # Decode the base64 string back to bytes
         img_bytes = base64.b64decode(base64_img_bytes)
@@ -241,33 +277,43 @@ class _Multion:
 # Create a Multion instance
 _multion_instance = _Multion()
 
+
 # Expose the login and post methods at the module level
 def login():
     _multion_instance.login()
 
+
 def post(url, data):
     return _multion_instance.post(url, data)
+
 
 def get():
     return _multion_instance.get()
 
+
 def new_session(data):
     return _multion_instance.new_session(data)
+
 
 def update_session(tabId, data):
     return _multion_instance.update_session(tabId, data)
 
+
 def list_sessions():
     return _multion_instance.list_sessions()
+
 
 def delete_token():
     _multion_instance.delete_token()
 
+
 def get_screenshot(response, height=None, width=None):
     return _multion_instance.get_screenshot(response, height, width)
+
 
 def refresh_token():
     _multion_instance.refresh_token()
 
+
 def get_token():
-    return _multion_instance.token
+    return _multion_instance.get_token()
