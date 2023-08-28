@@ -73,10 +73,12 @@ class _Multion:
 
         # OAuth endpoints
         authorization_base_url = "https://auth.multion.ai/oauth2/authorize"
-        redirect_uri = f"https://api.multion.ai/callback?client_id={self.client_id}"
+        redirect_uri = "https://api.multion.ai/callback"
 
         # Create an OAuth2 session
-        oauth = OAuth2Session(self.multion_id, redirect_uri=redirect_uri)
+        oauth = OAuth2Session(
+            self.multion_id, redirect_uri=redirect_uri, state=self.client_id
+        )
 
         # Get the authorization URL
         authorization_url, state = oauth.authorization_url(authorization_base_url)
@@ -132,7 +134,6 @@ class _Multion:
             encrypted_token = self.fernet.encrypt(json.dumps(self.token).encode())
             with open(self.token_file, "wb") as f:
                 f.write(encrypted_token)
-
 
         client = OAuth2Session(
             self.client_id,
