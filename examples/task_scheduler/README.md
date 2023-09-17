@@ -3,7 +3,7 @@
 
 You can add and schedule repetitive tasks that MultiOn will automatically execute in on your behalf everyday 🔥🚀
 
-**Minimum supported version of langchain to run the langchain examples: v0.0.265**
+**Requires langchain >= 0.0.265**
 
 # Installation
 1. `pip install -r requirements.txt`
