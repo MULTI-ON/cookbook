@@ -23,20 +23,24 @@ from tkinter import simpledialog
 
 # tasks = []
 FLAG = "START"
-OPENAI_API_KEY = None ### your openAPI KEY
+import os
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
+
 
 def alert(task, tasks):
     global OPENAI_API_KEY
+
     def call_multion(task, tasks):
         global FLAG
-        if(OPENAI_API_KEY==None):
+        if OPENAI_API_KEY == None:
             llm = OpenAI(
                 temperature=0,
             )
         else:
             llm = OpenAI(
                 temperature=0,
-                openai_api_key= OPENAI_API_KEY,
+                openai_api_key=OPENAI_API_KEY,
             )
         toolkit = MultionToolkit()
         agent = initialize_agent(
@@ -47,13 +51,13 @@ def alert(task, tasks):
         )
         while True and task.FLAG == "START" and FLAG == "START" and task.is_active:
             time.sleep(10)
-        # Get current time
+            # Get current time
             current_time = datetime.now()
-            
+
             if current_time >= task.date_time:
                 print(task.description)
                 agent.run(task.description)
-                
+
                 if task.repeat_type == "Daily":
                     task.date_time += timedelta(days=1)
                 elif task.repeat_type == "Weekly":
@@ -94,7 +98,9 @@ def multion_login():
 
 
 class Task:
-    def __init__(self, name, date_time, description, FLAG, repeat_type, custom_repeat_interval):
+    def __init__(
+        self, name, date_time, description, FLAG, repeat_type, custom_repeat_interval
+    ):
         self.name = name
         self.date_time = date_time
         self.description = description
@@ -105,6 +111,7 @@ class Task:
 
     def stop(self):
         self.is_active = False
+
 
 class SchedulerApp:
     def __init__(self, root, tasks):
@@ -118,7 +125,6 @@ class SchedulerApp:
         self.repeat_var = StringVar()  # Variable for Repeat dropdown
         self.repeat_var.set("None")  # Default value
         self.custom_repeat_interval = IntVar()  # Variable for Custom Repeat entry
-        
 
         # Set time
         self.current_time = datetime.now()
@@ -246,20 +252,34 @@ class SchedulerApp:
         # Repeat Dropdown Menu
         repeat_label = ttk.Label(self.root, text="Repeat:", style="TLabel")
         repeat_label.pack(pady=5)
-        repeat_options = ["None","Every 30 Seconds", "Every 1 Minute", "Hourly", "Daily", "Weekly", "Monthly", "Custom"]
+        repeat_options = [
+            "None",
+            "Every 30 Seconds",
+            "Every 1 Minute",
+            "Hourly",
+            "Daily",
+            "Weekly",
+            "Monthly",
+            "Custom",
+        ]
         repeat_menu = ttk.OptionMenu(self.root, self.repeat_var, *repeat_options)
         repeat_menu.pack(pady=5)
 
         # Custom Repeat Entry (hidden by default)
         self.custom_repeat_frame = ttk.Frame(self.root)
-        custom_repeat_label = ttk.Label(self.custom_repeat_frame, text="Custom Repeat (Days):", style="TLabel")
-        custom_repeat_entry = ttk.Entry(self.custom_repeat_frame, textvariable=self.custom_repeat_interval, style="TEntry")
+        custom_repeat_label = ttk.Label(
+            self.custom_repeat_frame, text="Custom Repeat (Days):", style="TLabel"
+        )
+        custom_repeat_entry = ttk.Entry(
+            self.custom_repeat_frame,
+            textvariable=self.custom_repeat_interval,
+            style="TEntry",
+        )
         custom_repeat_label.pack(side=tk.LEFT, padx=5)
         custom_repeat_entry.pack(side=tk.LEFT, padx=5)
 
         # Check for changes in the "Repeat" dropdown menu
-        self.repeat_var.trace('w', self.update_custom_repeat_visibility)
-
+        self.repeat_var.trace("w", self.update_custom_repeat_visibility)
 
         ttk.Label(self.root, text="Description", style="TLabel").pack(pady=5)
         self.text_area_task_description = tk.Text(
@@ -301,7 +321,7 @@ class SchedulerApp:
 
     def sort_tasks(self, task):
         return task.date_time
-    
+
     def update_custom_repeat_visibility(self, *args):
         """Show or hide the Custom Repeat entry based on the Repeat dropdown selection."""
         if self.repeat_var.get() == "Custom":
@@ -321,8 +341,19 @@ class SchedulerApp:
             date_format = "%Y-%m-%d %H:%M"
             date_time = datetime.strptime(f"{date_str} {h}:{m}", date_format)
             repeat_type = self.repeat_var.get()
-            custom_repeat_interval = self.custom_repeat_interval.get() if self.repeat_var.get() == "Custom" else None
-            task = Task(name, date_time, description, "START", repeat_type, custom_repeat_interval)
+            custom_repeat_interval = (
+                self.custom_repeat_interval.get()
+                if self.repeat_var.get() == "Custom"
+                else None
+            )
+            task = Task(
+                name,
+                date_time,
+                description,
+                "START",
+                repeat_type,
+                custom_repeat_interval,
+            )
 
             # Add task to the Manager list
             self.tasks.append(task)
@@ -413,48 +444,87 @@ def login_multion():
     multion_login()
 
 
-
-
 class APIKeyInputDialog:
     def __init__(self, parent):
         self.parent = parent
         self.parent.title("OpenAI API Key")
 
         self.api_key = None
+        self.style = ttk.Style()
         self.create_widgets()
 
     def create_widgets(self):
+        # Background and foreground colors
+        bg_color = "#ffffff"  # Apple-style white background
+        fg_color = "#333333"  # Dark text for better readability
+        primary_color = "#007AFF"  # Apple-style blue for buttons and active elements
+        hover_color = "#0051c7"  # Slightly darker blue tone for hover
+        font_choice = ("Helvetica", 14)  # Font choice
+
+        # Update styles
+        self.style.configure(
+            "TLabel", font=font_choice, background=bg_color, foreground=fg_color
+        )
+        self.style.configure(
+            "TEntry", font=font_choice, background="#ffffff", foreground=fg_color
+        )
+
         self.label = tk.Label(self.parent, text="Enter your OpenAI API Key:")
         self.label.pack(pady=10)
 
-        self.api_key_entry = tk.Entry(self.parent,)
+        self.api_key_entry = tk.Entry(self.parent, font=font_choice, show="*")
         self.api_key_entry.pack(pady=5)
 
-        self.ok_button = tk.Button(self.parent, text="OK", command=self.get_api_key)
+        self.ok_button = tk.Button(
+            self.parent,
+            text="OK",
+            command=self.get_api_key,
+            relief=tk.FLAT,
+            bg=primary_color,
+            fg=fg_color,
+            font=font_choice,
+            cursor="hand2",
+        )
         self.ok_button.pack(pady=10)
+        self.ok_button.bind("<Enter>", lambda e: self.ok_button.config(bg=hover_color))
+        self.ok_button.bind(
+            "<Leave>", lambda e: self.ok_button.config(bg=primary_color)
+        )
 
     def get_api_key(self):
         api_key = self.api_key_entry.get()
+        print("Submitted API key: ", api_key)
 
         if api_key:
             self.api_key = api_key
-            self.parent.destroy()  # Close the main window
+            self.parent.quit()  # Close the input widget
         else:
             messagebox.showerror("Error", "API key cannot be empty")
 
+
 def get_openai_api_key():
-    root = tk.Tk()
-    dialog = APIKeyInputDialog(root)
-    root.mainloop()
-    return dialog.api_key
+    global OPENAI_API_KEY
 
+    api_key = OPENAI_API_KEY
+    if not api_key:
+        print("Getting OpenAI API Key...")
+        root = tk.Tk()
+        dialog = APIKeyInputDialog(root)
+        root.mainloop()
+        api_key = dialog.api_key
+        root.destroy()
 
+    OPENAI_API_KEY = api_key
+    return api_key
 
 
 ### Program Start
-
 OPENAI_API_KEY = get_openai_api_key()
-
+if OPENAI_API_KEY is not None:
+    os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+    print("Set OPENAI_API_KEY: ", OPENAI_API_KEY)
+else:
+    print("OPENAI_API_KEY is not set.")
 
 if platform.system() == "Darwin":
     import rumps
@@ -495,6 +565,7 @@ if platform.system() == "Darwin":
         manager = Manager()
         tasks = manager.list()
         RumpsSchedulerApp(tasks).run()
+
 else:
     tasks = []
     import pystray
@@ -530,5 +601,8 @@ else:
             pystray.MenuItem("Exit", after_click),
         ),
     )
+
+    ### Program Start
+    OPENAI_API_KEY = get_openai_api_key()
 
     icon.run()
