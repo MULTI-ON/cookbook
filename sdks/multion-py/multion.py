@@ -13,11 +13,15 @@ from IPython.display import display
 
 import cognitojwt
 
+custom_url = "http://127.0.0.1:8080"
 
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
         self.token = None
         self.token_file = token_file
+        self.api_url = "http://127.0.0.1:8080"
+        #custom_url if custom_url else "https://api.multion.ai"
+        self.auth_url = "https://auth.multion.ai"
 
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
         with open(secrets_file, "r") as f:
@@ -46,6 +50,7 @@ class _Multion:
             os.makedirs(self.multion_dir)
 
         self.token_file = os.path.join(self.multion_dir, "multion_token.enc")
+        self.is_remote = self.get_remote()
 
         # Load token if it exists
         self.load_token()
@@ -161,7 +166,7 @@ class _Multion:
 
         # If a tabId is provided, update the existing session
         if tabId is not None:
-            url = f"https://api.multion.ai/sessions/{tabId}"
+            url = f"{self.api_url}/sessions/{tabId}"
 
         attempts = 0
         while attempts < 5:  # tries up to 5 times
@@ -201,18 +206,18 @@ class _Multion:
         if self.token is None:
             raise Exception("You must log in before making API calls.")
         headers = {"Authorization": f"Bearer {self.token['access_token']}"}
-        url = "https://api.multion.ai/sessions"
+        url = f"{self.api_url}/sessions"
 
         response = requests.get(url, headers=headers)
         return response.json()["response"]["data"]
 
     def new_session(self, data):
-        url = "https://api.multion.ai/sessions"
+        url = f"{self.api_url}/sessions"
         print("running new session")
         return self.post(url, data)
 
     def update_session(self, tabId, data):
-        url = f"https://api.multion.ai/session/{tabId}"
+        url = f"{self.api_url}/session/{tabId}"
         print("session updated")
         return self.post(url, data)
 
@@ -220,7 +225,7 @@ class _Multion:
         if self.token is None:
             raise Exception("You must log in before closing a session.")
         headers = {"Authorization": f"Bearer {self.token['access_token']}"}
-        url = f"https://api.multion.ai/session/{tabId}"
+        url = f"{self.api_url}/session/{tabId}"
         response = requests.delete(url, headers=headers)
 
         if response.ok:  # checks if status_code is 200-400
@@ -290,6 +295,32 @@ class _Multion:
         # Display the image in Jupyter Notebook
         display(img)
 
+    def get_remote(self):
+
+        response = requests.get(
+            f"{self.api_url}/is_remote"
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return data["is_remote"]
+        else:
+            return False
+
+    def set_remote(self, value: bool):
+
+        # headers = {"Authorization": f"Bearer {self.token['access_token']}"}
+        data = {"value": value}
+        url = f"{self.api_url}/is_remote"
+        response = requests.post(url, json=data)
+        print("data:", response)
+        if response.status_code == 200:
+            data = response.json()
+            print("data:", data["is_remote"])
+            self.is_remote = data["is_remote"]
+            return data["is_remote"]
+        else:
+            print("Failed to get token")
+            return None
 
 # Create a Multion instance
 _multion_instance = _Multion()
@@ -338,3 +369,12 @@ def refresh_token():
 
 def get_token():
     return _multion_instance.get_token()
+
+
+def get_remote():
+    return _multion_instance.get_remote()
+
+
+def set_remote(value: bool):
+    return _multion_instance.set_remote(value)
+
