@@ -9,7 +9,7 @@ import time
 import base64
 from PIL import Image
 from io import BytesIO
-from IPython.display import display
+from IPython.display import display, Video
 
 import cognitojwt
 
@@ -50,7 +50,7 @@ class _Multion:
             os.makedirs(self.multion_dir)
 
         self.token_file = os.path.join(self.multion_dir, "multion_token.enc")
-        self.is_remote = self.get_remote()
+        self.is_remote = False
 
         # Load token if it exists
         self.load_token()
@@ -296,7 +296,6 @@ class _Multion:
         display(img)
 
     def get_remote(self):
-
         response = requests.get(
             f"{self.api_url}/is_remote"
         )
@@ -304,24 +303,40 @@ class _Multion:
             data = response.json()
             return data["is_remote"]
         else:
+            print("Failed to get token")
             return False
 
     def set_remote(self, value: bool):
-
-        # headers = {"Authorization": f"Bearer {self.token['access_token']}"}
         data = {"value": value}
         url = f"{self.api_url}/is_remote"
         response = requests.post(url, json=data)
-        print("data:", response)
         if response.status_code == 200:
             data = response.json()
-            print("data:", data["is_remote"])
             self.is_remote = data["is_remote"]
             return data["is_remote"]
         else:
             print("Failed to get token")
             return None
-
+        
+    def get_video(self, session_id: str):
+        if self.is_remote:
+            response = requests.get(
+                f"{self.api_url}/sessionVideo/{session_id}", stream=True
+            )
+            if response.status_code == 200:
+                # Save the video stream to a file
+                with open('video.webm', 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+                # Display the video using IPython display
+                return Video('video.webm')
+            else:
+                print("Failed to get video")
+                return None
+        else:
+            print("Not in remote mode")
+            return None
 # Create a Multion instance
 _multion_instance = _Multion()
 
