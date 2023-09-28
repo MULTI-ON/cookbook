@@ -13,14 +13,11 @@ from IPython.display import display, Video
 
 import cognitojwt
 
-custom_url = "http://127.0.0.1:8080"
-
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
         self.token = None
         self.token_file = token_file
-        self.api_url = "http://127.0.0.1:8080"
-        #custom_url if custom_url else "https://api.multion.ai"
+        self.api_url = "https://api.multion.ai"
         self.auth_url = "https://auth.multion.ai"
 
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
@@ -142,7 +139,7 @@ class _Multion:
                 f.write(encrypted_token)
 
         client = OAuth2Session(
-            self.client_id,
+            self.multion_id,
             token=self.token,
             auto_refresh_url=token_url,
             auto_refresh_kwargs=extra,
@@ -165,16 +162,16 @@ class _Multion:
         headers = {"Authorization": f"Bearer {self.token['access_token']}"}
 
         # If a tabId is provided, update the existing session
-        if tabId is not None:
-            url = f"{self.api_url}/sessions/{tabId}"
+        # if tabId is not None:
+        #     url = f"{self.api_url}/sessions/{tabId}"
 
         attempts = 0
-        while attempts < 5:  # tries up to 5 times
+        while attempts < 1:  # tries up to 5 times
             response = requests.post(url, json=data, headers=headers)
 
             if response.ok:  # checks if status_code is 200-400
                 try:
-                    return response.json()["response"]["data"]
+                    return response.json()['response']
                 except json.JSONDecodeError:
                     print("JSONDecodeError: The server didn't respond with valid JSON.")
 
@@ -197,7 +194,7 @@ class _Multion:
             attempts += 1
 
         # If we've exhausted all attempts and not returned, raise an error
-        if attempts == 5:
+        if attempts == 1:
             print(f"Request failed with status code: {response.status_code}")
             print(f"Response text: {response.text}")
             raise Exception("Failed to get a valid response after 5 attempts")
@@ -209,7 +206,7 @@ class _Multion:
         url = f"{self.api_url}/sessions"
 
         response = requests.get(url, headers=headers)
-        return response.json()["response"]["data"]
+        return response.json()
 
     def new_session(self, data):
         url = f"{self.api_url}/sessions"
@@ -230,7 +227,7 @@ class _Multion:
 
         if response.ok:  # checks if status_code is 200-400
             try:
-                return response.json()["response"]["data"]
+                return response.json()['response']
             except json.JSONDecodeError:
                 print("JSONDecodeError: The server didn't respond with valid JSON.")
         else:
@@ -247,7 +244,7 @@ class _Multion:
             f"https://api.multion.ai/get_token?client_id={self.client_id}"
         )
         if response.status_code == 200:
-            data = response.json()
+            data = response.json()['response']
             if "access_token" in data:
                 return data["access_token"]
             else:
@@ -310,13 +307,15 @@ class _Multion:
         data = {"value": value}
         url = f"{self.api_url}/is_remote"
         response = requests.post(url, json=data)
-        if response.status_code == 200:
-            data = response.json()
-            self.is_remote = data["is_remote"]
-            return data["is_remote"]
+        if response.ok:  # checks if status_code is 200-400
+            try:
+                data = response.json()
+                self.is_remote = data["is_remote"]
+                return data["is_remote"]
+            except json.JSONDecodeError:
+                print("JSONDecodeError: The server didn't respond with valid JSON.")
         else:
-            print("Failed to get token")
-            return None
+            print("Failed set remote")
         
     def get_video(self, session_id: str):
         if self.is_remote:
@@ -337,6 +336,9 @@ class _Multion:
         else:
             print("Not in remote mode")
             return None
+        
+    def set_api_url(self, url: str):
+        self.api_url = url
 # Create a Multion instance
 _multion_instance = _Multion()
 
@@ -393,3 +395,9 @@ def get_remote():
 def set_remote(value: bool):
     return _multion_instance.set_remote(value)
 
+
+def get_video(session_id: str):
+    return _multion_instance.get_video(session_id)
+
+def set_api_url(url: str):
+    _multion_instance.set_api_url(url)
