@@ -474,6 +474,7 @@ class APIKeyInputDialog:
 
         self.api_key_entry = tk.Entry(self.parent, font=font_choice, show="*")
         self.api_key_entry.pack(pady=5)
+        self.api_key_entry.bind("<Return>", lambda event: self.get_api_key())
 
         self.ok_button = tk.Button(
             self.parent,
@@ -547,7 +548,7 @@ if platform.system() == "Darwin":
                 rumps.MenuItem("Add Task", callback=self.add_task),
                 rumps.MenuItem("Show Tasks", callback=self.show_tasks),
                 rumps.MenuItem("Login to MultiOn", callback=self.loginmultion),
-                rumps.MenuItem("Exit", callback=rumps.quit_application),
+                # rumps.MenuItem("Exit", callback=rumps.quit_application),
             ]
 
         def add_task(self, _):
@@ -562,6 +563,7 @@ if platform.system() == "Darwin":
             login_multion()
 
     if __name__ == "__main__":
+        print("Starting RumpsSchedulerApp...")
         manager = Manager()
         tasks = manager.list()
         RumpsSchedulerApp(tasks).run()
