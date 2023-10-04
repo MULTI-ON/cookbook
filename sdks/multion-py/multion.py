@@ -9,15 +9,16 @@ import time
 import base64
 from PIL import Image
 from io import BytesIO
-from IPython.display import display
+from IPython.display import display, Video
 
 import cognitojwt
-
 
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
         self.token = None
         self.token_file = token_file
+        self.api_url = "https://api.multion.ai"
+        self.auth_url = "https://auth.multion.ai"
 
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
         with open(secrets_file, "r") as f:
@@ -46,6 +47,7 @@ class _Multion:
             os.makedirs(self.multion_dir)
 
         self.token_file = os.path.join(self.multion_dir, "multion_token.enc")
+        self.is_remote = False
 
         # Load token if it exists
         self.load_token()
@@ -137,7 +139,7 @@ class _Multion:
                 f.write(encrypted_token)
 
         client = OAuth2Session(
-            self.client_id,
+            self.multion_id,
             token=self.token,
             auto_refresh_url=token_url,
             auto_refresh_kwargs=extra,
@@ -160,16 +162,16 @@ class _Multion:
         headers = {"Authorization": f"Bearer {self.token['access_token']}"}
 
         # If a tabId is provided, update the existing session
-        if tabId is not None:
-            url = f"https://api.multion.ai/sessions/{tabId}"
+        # if tabId is not None:
+        #     url = f"{self.api_url}/sessions/{tabId}"
 
         attempts = 0
-        while attempts < 5:  # tries up to 5 times
+        while attempts < 1:  # tries up to 5 times
             response = requests.post(url, json=data, headers=headers)
 
             if response.ok:  # checks if status_code is 200-400
                 try:
-                    return response.json()["response"]["data"]
+                    return response.json()['response']
                 except json.JSONDecodeError:
                     print("JSONDecodeError: The server didn't respond with valid JSON.")
 
@@ -192,7 +194,7 @@ class _Multion:
             attempts += 1
 
         # If we've exhausted all attempts and not returned, raise an error
-        if attempts == 5:
+        if attempts == 1:
             print(f"Request failed with status code: {response.status_code}")
             print(f"Response text: {response.text}")
             raise Exception("Failed to get a valid response after 5 attempts")
@@ -201,18 +203,18 @@ class _Multion:
         if self.token is None:
             raise Exception("You must log in before making API calls.")
         headers = {"Authorization": f"Bearer {self.token['access_token']}"}
-        url = "https://api.multion.ai/sessions"
+        url = f"{self.api_url}/sessions"
 
         response = requests.get(url, headers=headers)
-        return response.json()["response"]["data"]
+        return response.json()
 
     def new_session(self, data):
-        url = "https://api.multion.ai/sessions"
+        url = f"{self.api_url}/sessions"
         print("running new session")
         return self.post(url, data)
 
     def update_session(self, tabId, data):
-        url = f"https://api.multion.ai/session/{tabId}"
+        url = f"{self.api_url}/session/{tabId}"
         print("session updated")
         return self.post(url, data)
 
@@ -220,12 +222,12 @@ class _Multion:
         if self.token is None:
             raise Exception("You must log in before closing a session.")
         headers = {"Authorization": f"Bearer {self.token['access_token']}"}
-        url = f"https://api.multion.ai/session/{tabId}"
+        url = f"{self.api_url}/session/{tabId}"
         response = requests.delete(url, headers=headers)
 
         if response.ok:  # checks if status_code is 200-400
             try:
-                return response.json()["response"]["data"]
+                return response.json()['response']
             except json.JSONDecodeError:
                 print("JSONDecodeError: The server didn't respond with valid JSON.")
         else:
@@ -290,7 +292,53 @@ class _Multion:
         # Display the image in Jupyter Notebook
         display(img)
 
+    def get_remote(self):
+        response = requests.get(
+            f"{self.api_url}/is_remote"
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return data["is_remote"]
+        else:
+            print("Failed to get token")
+            return False
 
+    def set_remote(self, value: bool):
+        data = {"value": value}
+        url = f"{self.api_url}/is_remote"
+        response = requests.post(url, json=data)
+        if response.ok:  # checks if status_code is 200-400
+            try:
+                data = response.json()
+                self.is_remote = data["is_remote"]
+                return data["is_remote"]
+            except json.JSONDecodeError:
+                print("JSONDecodeError: The server didn't respond with valid JSON.")
+        else:
+            print("Failed set remote")
+        
+    def get_video(self, session_id: str):
+        if self.is_remote:
+            response = requests.get(
+                f"{self.api_url}/sessionVideo/{session_id}", stream=True
+            )
+            if response.status_code == 200:
+                # Save the video stream to a file
+                with open('video.webm', 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+                # Display the video using IPython display
+                return Video('video.webm')
+            else:
+                print("Failed to get video")
+                return None
+        else:
+            print("Not in remote mode")
+            return None
+        
+    def set_api_url(self, url: str):
+        self.api_url = url
 # Create a Multion instance
 _multion_instance = _Multion()
 
@@ -338,3 +386,18 @@ def refresh_token():
 
 def get_token():
     return _multion_instance.get_token()
+
+
+def get_remote():
+    return _multion_instance.get_remote()
+
+
+def set_remote(value: bool):
+    return _multion_instance.set_remote(value)
+
+
+def get_video(session_id: str):
+    return _multion_instance.get_video(session_id)
+
+def set_api_url(url: str):
+    _multion_instance.set_api_url(url)
