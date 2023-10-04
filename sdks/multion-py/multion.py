@@ -244,7 +244,7 @@ class _Multion:
             f"https://api.multion.ai/get_token?client_id={self.client_id}"
         )
         if response.status_code == 200:
-            data = response.json()['response']
+            data = response.json()
             if "access_token" in data:
                 return data["access_token"]
             else:
