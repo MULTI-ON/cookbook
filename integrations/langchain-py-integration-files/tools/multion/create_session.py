@@ -68,7 +68,7 @@ class MultionCreateSession(BaseTool):
         query: str,
         url: Optional[str] = "https://www.google.com/",
         run_manager: Optional[CallbackManagerForToolRun] = None,
-    ) -> str:
+    ) -> dict:
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(None, self._run, query,url)
 

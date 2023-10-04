@@ -73,11 +73,12 @@ Note: TabId must be received from previous Browser window creation."""
     
     async def _arun(
         self,
+        tabId: str,
         query: str,
         url: Optional[str] = "https://www.google.com/",
         run_manager: Optional[CallbackManagerForToolRun] = None,
-    ) -> str:
+    ) -> dict:
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, self._run, query,url)
+        result = await loop.run_in_executor(None, self._run, tabId,query,url)
 
         return result
