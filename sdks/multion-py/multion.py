@@ -166,7 +166,7 @@ class _Multion:
         #     url = f"{self.api_url}/sessions/{tabId}"
 
         attempts = 0
-        while attempts < 1:  # tries up to 5 times
+        while attempts < 5:  # tries up to 5 times
             response = requests.post(url, json=data, headers=headers)
 
             if response.ok:  # checks if status_code is 200-400
