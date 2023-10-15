@@ -13,6 +13,7 @@ from IPython.display import display, Video
 
 import cognitojwt
 
+
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
         self.token = None
@@ -41,6 +42,7 @@ class _Multion:
         self.fernet = Fernet(self.fernet_key)
 
         # Create a .multion directory in the user's home folder if it doesn't exist
+        # TODO: handle remote server's with restricted home directories
         self.home_dir = os.path.expanduser("~")
         self.multion_dir = os.path.join(self.home_dir, ".multion")
         if not os.path.exists(self.multion_dir):
@@ -84,8 +86,16 @@ class _Multion:
 
         # Get the authorization URL
         authorization_url, state = oauth.authorization_url(authorization_base_url)
-        # Open the authorization URL in a new browser tab
-        webbrowser.open(authorization_url)
+
+        try:
+            # Try to open the authorization URL in a new browser tab
+            webbrowser.open(authorization_url)
+        except webbrowser.Error:
+            # If an error occurs, print the authorization URL
+            print(
+                "Please visit this URL to authorize the application: "
+                + authorization_url
+            )
 
         # Poll the server for the token
         attempts = 0
@@ -95,7 +105,7 @@ class _Multion:
                 self.token = data
                 self.save_token()  # Save the token after updating it
                 break
-            attempts +=1
+            attempts += 1
             time.sleep(1)  # Wait before the next poll
 
     def register_client(self):
@@ -171,7 +181,7 @@ class _Multion:
 
             if response.ok:  # checks if status_code is 200-400
                 try:
-                    return response.json()['response']['data']
+                    return response.json()["response"]["data"]
                 except json.JSONDecodeError:
                     print("JSONDecodeError: The server didn't respond with valid JSON.")
 
@@ -227,7 +237,7 @@ class _Multion:
 
         if response.ok:  # checks if status_code is 200-400
             try:
-                return response.json()['response']
+                return response.json()["response"]
             except json.JSONDecodeError:
                 print("JSONDecodeError: The server didn't respond with valid JSON.")
         else:
@@ -293,9 +303,7 @@ class _Multion:
         display(img)
 
     def get_remote(self):
-        response = requests.get(
-            f"{self.api_url}/is_remote"
-        )
+        response = requests.get(f"{self.api_url}/is_remote")
         if response.status_code == 200:
             data = response.json()
             return data["is_remote"]
@@ -316,7 +324,7 @@ class _Multion:
                 print("JSONDecodeError: The server didn't respond with valid JSON.")
         else:
             print("Failed set remote")
-        
+
     def get_video(self, session_id: str):
         if self.is_remote:
             response = requests.get(
@@ -324,21 +332,23 @@ class _Multion:
             )
             if response.status_code == 200:
                 # Save the video stream to a file
-                with open('video.webm', 'wb') as f:
+                with open("video.webm", "wb") as f:
                     for chunk in response.iter_content(chunk_size=1024):
                         if chunk:
                             f.write(chunk)
                 # Display the video using IPython display
-                return Video('video.webm')
+                return Video("video.webm")
             else:
                 print("Failed to get video")
                 return None
         else:
             print("Not in remote mode")
             return None
-        
+
     def set_api_url(self, url: str):
         self.api_url = url
+
+
 # Create a Multion instance
 _multion_instance = _Multion()
 
@@ -398,6 +408,7 @@ def set_remote(value: bool):
 
 def get_video(session_id: str):
     return _multion_instance.get_video(session_id)
+
 
 def set_api_url(url: str):
     _multion_instance.set_api_url(url)
