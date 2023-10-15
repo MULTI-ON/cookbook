@@ -1,0 +1,15 @@
+aiohttp
+#chromadb
+fastapi
+gunicorn
+langchain
+openai
+python-dotenv
+sendblue
+tenacity
+#tiktoken
+transformers
+twilio
+uvicorn
+
+google-search-results
