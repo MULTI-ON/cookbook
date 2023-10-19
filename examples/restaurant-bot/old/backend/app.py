@@ -6,32 +6,21 @@ from typing import List
 from urllib.parse import parse_qs
 
 from agents import setup_sync_agent
-from dotenv import dotenv_values
 from fastapi import FastAPI, Request, Response
 from pydantic import BaseModel
 from sendblue import Sendblue
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
+from decouple import config
 
-if not os.getenv("RENDER"):
-    env_config = dotenv_values(".local.env")
-    OPENAI_MODEL_NAME = env_config.get("OPENAI_MODEL_NAME", "text-davinci-003")
-    OPENAI_API_KEY = env_config["OPENAI_API_KEY"]
-    SENDBLUE_API_KEY = env_config["SENDBLUE_API_KEY"]
-    SENDBLUE_API_SECRET = env_config["SENDBLUE_API_SECRET"]
-    DATA_LOCATION = env_config["DATA_LOCATION"]
-    TWILIO_PHONE_NUMBER = env_config["TWILIO_PHONE_NUMBER"]
-    TWILIO_ACCOUNT_SID = env_config["TWILIO_ACCOUNT_SID"]
-    TWILIO_AUTH_TOKEN = env_config["TWILIO_AUTH_TOKEN"]
-else:
-    OPENAI_MODEL_NAME = os.environ.get("OPENAI_MODEL_NAME", "text-davinci-003")
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    SENDBLUE_API_KEY = os.getenv("SENDBLUE_API_KEY")
-    SENDBLUE_API_SECRET = os.getenv("SENDBLUE_API_SECRET")
-    DATA_LOCATION = os.getenv("DATA_LOCATION")
-    TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
-    TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
-    TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+OPENAI_MODEL_NAME = config("OPENAI_MODEL_NAME", "gpt-4")
+OPENAI_API_KEY = config("OPENAI_API_KEY")
+SENDBLUE_API_KEY = config("SENDBLUE_API_KEY")
+SENDBLUE_API_SECRET = config("SENDBLUE_API_SECRET")
+DATA_LOCATION = config("DATA_LOCATION", "./data")
+# TWILIO_PHONE_NUMBER = config("TWILIO_PHONE_NUMBER")
+# TWILIO_ACCOUNT_SID = config("TWILIO_ACCOUNT_SID")
+# TWILIO_AUTH_TOKEN = config("TWILIO_AUTH_TOKEN")
 
 app = FastAPI()
 sendblue = Sendblue(SENDBLUE_API_KEY, SENDBLUE_API_SECRET)
