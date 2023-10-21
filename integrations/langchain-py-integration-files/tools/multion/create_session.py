@@ -59,10 +59,13 @@ class MultionCreateSession(BaseTool):
     ) -> dict:
         try:
             response = multion.new_session({"input": query, "url": url})
-            return {"tabId": response["tabId"], "Response": response["message"]}
+            return {
+                "sessionId": response["session_id"],
+                "Response": response["message"],
+            }
         except Exception as e:
             raise Exception(f"An error occurred: {e}")
-        
+
     async def _arun(
         self,
         query: str,
@@ -70,6 +73,6 @@ class MultionCreateSession(BaseTool):
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> dict:
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, self._run, query,url)
+        result = await loop.run_in_executor(None, self._run, query, url)
 
         return result

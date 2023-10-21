@@ -19,10 +19,10 @@ else:
 class CloseSessionSchema(BaseModel):
     """Input for UpdateSessionTool."""
 
-    tabId: str = Field(
-        ..., description="The tabID, received from one of the createSessions or updateSessions run before"
+    sessionId: str = Field(
+        ...,
+        description="The sessionId, received from one of the createSessions or updateSessions run before",
     )
-   
 
 
 class MultionCloseSession(BaseTool):
@@ -37,29 +37,30 @@ class MultionCloseSession(BaseTool):
     name: str = "close_multion_session"
     description: str = """Use this tool to close \
 an existing corresponding Multion Browser Window with provided fields. \
-Note: TabId must be received from previous Browser window creation."""
+Note: SessionId must be received from previous Browser window creation."""
     args_schema: Type[CloseSessionSchema] = CloseSessionSchema
-    tabId: str = ""
+    sessionId: str = ""
 
     def _run(
         self,
-        tabId: str,
+        sessionId: str,
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> None:
         try:
             try:
-                response = multion.close_session(tabId)
+                response = multion.close_session(sessionId)
             except Exception as e:
                 print(f"{e}, retrying...")
                 return {"error": f"{e}", "Response": "retrying..."}
         except Exception as e:
             raise Exception(f"An error occurred: {e}")
+
     async def _arun(
         self,
-        tabId: str,
+        sessionId: str,
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> None:
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, self._run, tabId)
+        result = await loop.run_in_executor(None, self._run, sessionId)
 
         return result

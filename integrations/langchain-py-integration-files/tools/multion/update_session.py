@@ -19,8 +19,9 @@ else:
 class UpdateSessionSchema(BaseModel):
     """Input for UpdateSessionTool."""
 
-    tabId: str = Field(
-        ..., description="The tabID, received from one of the createSessions run before"
+    sessionId: str = Field(
+        ...,
+        description="The sessionId, received from one of the createSessions run before",
     )
     query: str = Field(
         ...,
@@ -45,22 +46,24 @@ class MultionUpdateSession(BaseTool):
     name: str = "update_multion_session"
     description: str = """Use this tool to update \
 an existing corresponding Multion Browser Window with provided fields. \
-Note: TabId must be received from previous Browser window creation."""
+Note: SessionId must be received from previous Browser window creation."""
     args_schema: Type[UpdateSessionSchema] = UpdateSessionSchema
-    tabId: str = ""
+    sessionId: str = ""
 
     def _run(
         self,
-        tabId: str,
+        sessionId: str,
         query: str,
         url: Optional[str] = "https://www.google.com/",
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> dict:
         try:
             try:
-                response = multion.update_session(tabId, {"input": query, "url": url})
-                content = {"tabId": tabId, "Response": response["message"]}
-                self.tabId = tabId
+                response = multion.update_session(
+                    sessionId, {"input": query, "url": url}
+                )
+                content = {"sessionId": sessionId, "Response": response["message"]}
+                self.sessionId = sessionId
                 return content
             except Exception as e:
                 print(f"{e}, retrying...")
@@ -70,15 +73,15 @@ Note: TabId must be received from previous Browser window creation."""
                 # return {"tabId": response["tabId"], "Response": response["message"]}
         except Exception as e:
             raise Exception(f"An error occurred: {e}")
-    
+
     async def _arun(
         self,
-        tabId: str,
+        sessionId: str,
         query: str,
         url: Optional[str] = "https://www.google.com/",
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> dict:
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, self._run, tabId,query,url)
+        result = await loop.run_in_executor(None, self._run, sessionId, query, url)
 
         return result
