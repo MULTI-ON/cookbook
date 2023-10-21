@@ -238,8 +238,8 @@ class _Multion:
         if response.ok:  # checks if status_code is 200-400
             try:
                 return response.json()["response"]
-            except json.JSONDecodeError:
-                print("JSONDecodeError: The server didn't respond with valid JSON.")
+            except Exception as e:
+                print(f"ERROR: {e}")
         else:
             print(f"Failed to close session. Status code: {response.status_code}")
 
