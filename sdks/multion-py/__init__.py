@@ -1,6 +1,20 @@
-from .multion import _Multion, login, post, get, new_session, update_session, list_sessions, refresh_token, get_screenshot, delete_token, get_token
+from .multion import (
+    _Multion,
+    login,
+    post,
+    get,
+    new_session,
+    update_session,
+    list_sessions,
+    refresh_token,
+    get_screenshot,
+    delete_token,
+    get_token,
+)
+from .browse import MultionToolSpec
 
 from importlib import metadata
+
 try:
     __version__ = metadata.version(__package__)
 except metadata.PackageNotFoundError:
