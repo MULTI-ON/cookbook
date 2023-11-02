@@ -7,6 +7,7 @@ from requests_oauthlib import OAuth2Session
 import json
 import time
 import base64
+import uuid
 from PIL import Image
 from io import BytesIO
 from IPython.display import display, Video
@@ -21,6 +22,17 @@ class _Multion:
         self.api_url = "https://api.multion.ai"
         self.auth_url = "https://auth.multion.ai"
 
+        # Get the API key from the environment variable
+        self.api_key = os.getenv("MULTION_API_KEY")
+
+        self.load_secrets(secrets_file)
+        self.generate_fernet_key()
+        self.create_multion_directory()
+
+        # Load token if it exists
+        self.load_token()
+
+    def load_secrets(self, secrets_file):
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
         with open(secrets_file, "r") as f:
             secrets = json.load(f)
@@ -38,21 +50,26 @@ class _Multion:
             with open(secrets_file, "w") as f:
                 json.dump(secrets, f, indent=4)
 
+    def generate_fernet_key(self):
         self.fernet_key = self.fernet_key.encode()
         self.fernet = Fernet(self.fernet_key)
 
+    def create_multion_directory(self):
         # Create a .multion directory in the user's home folder if it doesn't exist
-        # TODO: handle remote server's with restricted home directories
+        # This is also compatible with Google Colab
         self.home_dir = os.path.expanduser("~")
         self.multion_dir = os.path.join(self.home_dir, ".multion")
-        if not os.path.exists(self.multion_dir):
-            os.makedirs(self.multion_dir)
+        try:
+            os.makedirs(self.multion_dir, exist_ok=True)
+        except PermissionError:
+            # In case of restricted permissions in the home directory (like on Google Colab),
+            # we use a temporary directory
+            import tempfile
+
+            self.multion_dir = tempfile.mkdtemp()
 
         self.token_file = os.path.join(self.multion_dir, "multion_token.enc")
         self.is_remote = False
-
-        # Load token if it exists
-        self.load_token()
 
     def verify_cognito_token(self):
         try:
@@ -65,7 +82,16 @@ class _Multion:
             print("Could not verify token: ", e)
             return None
 
-    def login(self):
+    def login(self, use_api=False):
+        if use_api:
+            if self.api_key is not None:
+                # TODO: Verify the API key
+                print("Already logged in usign API key.")
+                return
+            else:
+                self.issue_api_key()
+                return
+
         if self.token is not None:
             verified_claims = self.verify_cognito_token()
             if verified_claims:
@@ -108,13 +134,29 @@ class _Multion:
             attempts += 1
             time.sleep(1)  # Wait before the next poll
 
+    def issue_api_key(self):
+        # Get the authorization URL
+        app_url = "https://app.multion.ai"
+
+        try:
+            # Try to open the authorization URL in a new browser tab
+            webbrowser.open(app_url)
+        except webbrowser.Error:
+            # If an error occurs, print the authorization URL
+            print("Please visit this URL to generate an API Key: " + app_url)
+
+        # Wait for user input to get the API key
+        self.api_key = input("Please enter your API Key: ")
+
     def register_client(self):
-        response = requests.post("https://api.multion.ai/register_client")
-        if response.status_code == 200:
-            data = response.json()
-            return data.get("client_id")
-        else:
-            raise Exception("Failed to register client")
+        # Get the MAC address and use it to generate a UUID
+        mac_num = uuid.getnode()
+        mac = ":".join(("%012X" % mac_num)[i : i + 2] for i in range(0, 12, 2))
+        device_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, mac)
+        print(device_uuid)
+
+        # TODO: Register the client with the backend to the user
+        return device_uuid
 
     def load_token(self):
         if os.path.exists(self.token_file) and os.path.getsize(self.token_file) > 0:
@@ -165,15 +207,21 @@ class _Multion:
         except Exception as e:
             print(f"An error occurred while refreshing token: {str(e)}")
 
-    def post(self, url, data, tabId=None):
-        if self.token is None:
-            raise Exception("You must log in before making API calls.")
+    def set_headers(self):
+        headers = {}
+        if self.api_key is not None:
+            headers["X_MULTION_API_KEY"] = self.api_key
+        if self.token is not None:
+            headers["Authorization"] = f"Bearer {self.token['access_token']}"
+        return headers
 
-        headers = {"Authorization": f"Bearer {self.token['access_token']}"}
+    def post(self, url, data, sessionId=None):
+        if self.token is None or self.api_key is None:
+            raise Exception(
+                "You must log in or provide an API key before making API calls."
+            )
 
-        # If a tabId is provided, update the existing session
-        # if tabId is not None:
-        #     url = f"{self.api_url}/sessions/{tabId}"
+        headers = self.set_headers()
 
         attempts = 0
         while attempts < 5:  # tries up to 5 times
@@ -196,7 +244,10 @@ class _Multion:
                 print(
                     "Server Disconnected. Please press connect in the Multion extension popup"
                 )
-
+            else:
+                print(f"Request failed with status code: {response.status_code}")
+                print(f"Response text: {response.text}")
+            
             # If we've not returned by now, sleep before the next attempt
             time.sleep(1)  # you may want to increase this value depending on the API
 
@@ -210,9 +261,13 @@ class _Multion:
             raise Exception("Failed to get a valid response after 5 attempts")
 
     def get(self):
-        if self.token is None:
-            raise Exception("You must log in before making API calls.")
-        headers = {"Authorization": f"Bearer {self.token['access_token']}"}
+        if self.token is None or self.api_key is None:
+            raise Exception(
+                "You must log in or provide an API key before making API calls."
+            )
+
+        headers = self.set_headers()
+
         url = f"{self.api_url}/sessions"
 
         response = requests.get(url, headers=headers)
@@ -223,16 +278,16 @@ class _Multion:
         print("running new session")
         return self.post(url, data)
 
-    def update_session(self, tabId, data):
-        url = f"{self.api_url}/session/{tabId}"
+    def update_session(self, sessionId, data):
+        url = f"{self.api_url}/session/{sessionId}"
         print("session updated")
         return self.post(url, data)
 
-    def close_session(self, tabId):
+    def close_session(self, sessionId):
         if self.token is None:
             raise Exception("You must log in before closing a session.")
         headers = {"Authorization": f"Bearer {self.token['access_token']}"}
-        url = f"{self.api_url}/session/{tabId}"
+        url = f"{self.api_url}/session/{sessionId}"
         response = requests.delete(url, headers=headers)
 
         if response.ok:  # checks if status_code is 200-400
@@ -353,9 +408,20 @@ class _Multion:
 _multion_instance = _Multion()
 
 
+# Expose the set_api_key method at the module level
+def set_api_key(api_key):
+    global _multion_instance
+    _multion_instance.api_key = api_key
+
+
+def get_api_key():
+    global _multion_instance
+    return _multion_instance.api_key
+
+
 # Expose the login and post methods at the module level
-def login():
-    _multion_instance.login()
+def login(use_api=False):
+    _multion_instance.login(use_api)
 
 
 def post(url, data):
@@ -370,12 +436,12 @@ def new_session(data):
     return _multion_instance.new_session(data)
 
 
-def update_session(tabId, data):
-    return _multion_instance.update_session(tabId, data)
+def update_session(sessionId, data):
+    return _multion_instance.update_session(sessionId, data)
 
 
-def close_session(tabId):
-    return _multion_instance.close_session(tabId)
+def close_session(sessionId):
+    return _multion_instance.close_session(sessionId)
 
 
 def list_sessions():
@@ -412,3 +478,7 @@ def get_video(session_id: str):
 
 def set_api_url(url: str):
     _multion_instance.set_api_url(url)
+
+
+# Add these lines at the end of the file
+api_key = property(get_api_key, set_api_key)
