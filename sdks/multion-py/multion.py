@@ -86,6 +86,7 @@ class _Multion:
         if use_api:
             if self.api_key is not None:
                 # TODO: Verify the API key
+                print("Already logged in usign API key.")
                 return
             else:
                 self.issue_api_key()
@@ -208,23 +209,19 @@ class _Multion:
 
     def set_headers(self):
         headers = {}
-        if self.token is not None:
-            headers["Authorization"] = f"Bearer {self.token['access_token']}"
         if self.api_key is not None:
             headers["X_MULTION_API_KEY"] = self.api_key
+        if self.token is not None:
+            headers["Authorization"] = f"Bearer {self.token['access_token']}"
         return headers
 
     def post(self, url, data, sessionId=None):
-        if self.token is None and self.api_key is None:
+        if self.token is None or self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
             )
 
         headers = self.set_headers()
-
-        # If a sessionId is provided, update the existing session
-        # if sessionId is not None:
-        #     url = f"{self.api_url}/sessions/{sessionId}"
 
         attempts = 0
         while attempts < 5:  # tries up to 5 times
@@ -247,7 +244,10 @@ class _Multion:
                 print(
                     "Server Disconnected. Please press connect in the Multion extension popup"
                 )
-
+            else:
+                print(f"Request failed with status code: {response.status_code}")
+                print(f"Response text: {response.text}")
+            
             # If we've not returned by now, sleep before the next attempt
             time.sleep(1)  # you may want to increase this value depending on the API
 
@@ -261,7 +261,7 @@ class _Multion:
             raise Exception("Failed to get a valid response after 5 attempts")
 
     def get(self):
-        if self.token is None and self.api_key is None:
+        if self.token is None or self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
             )
@@ -420,8 +420,8 @@ def get_api_key():
 
 
 # Expose the login and post methods at the module level
-def login():
-    _multion_instance.login()
+def login(use_api=False):
+    _multion_instance.login(use_api)
 
 
 def post(url, data):
