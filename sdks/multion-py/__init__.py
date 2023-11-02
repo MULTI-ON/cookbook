@@ -6,12 +6,18 @@ from .multion import (
     new_session,
     update_session,
     list_sessions,
+    close_session,
+    close_sessions,
     refresh_token,
     get_screenshot,
     delete_token,
     get_token,
+    get_video,
+    set_remote,
+    get_remote
 )
-from .browse import MultionToolSpec
+
+from . import browse
 
 from importlib import metadata
 

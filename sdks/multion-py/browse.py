@@ -3,6 +3,10 @@
 import base64
 from io import BytesIO
 from typing import Optional
+import multion
+import pytesseract
+from PIL import Image
+
 
 
 class MultionToolSpec:
@@ -17,7 +21,6 @@ class MultionToolSpec:
         mode: Optional[str] = "auto",
     ) -> None:
         """Initialize with parameters."""
-        import multion
 
         multion.login()
 
@@ -39,7 +42,6 @@ class MultionToolSpec:
             instruction (str): The detailed and specific natural language instruction for web browsing
             url (str): The best URL to start the session based on user instruction
         """
-        import multion
 
         multion.set_remote(False)
 
@@ -99,8 +101,7 @@ class MultionToolSpec:
         self.current_url = session["url"]
 
     def _read_screenshot(self, screenshot) -> str:
-        import pytesseract
-        from PIL import Image
+
 
         image_bytes = screenshot.replace("data:image/png;base64,", "")
         image = Image.open(self._bytes_to_image(image_bytes))

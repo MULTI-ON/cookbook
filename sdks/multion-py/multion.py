@@ -284,12 +284,25 @@ class _Multion:
         return self.post(url, data)
 
     def close_session(self, sessionId):
-        if self.token is None:
+        if self.token is None or self.api_key is None:
             raise Exception("You must log in before closing a session.")
         headers = {"Authorization": f"Bearer {self.token['access_token']}"}
         url = f"{self.api_url}/session/{sessionId}"
         response = requests.delete(url, headers=headers)
 
+        if response.ok:  # checks if status_code is 200-400
+            try:
+                return response.json()["response"]
+            except Exception as e:
+                print(f"ERROR: {e}")
+        else:
+            print(f"Failed to close session. Status code: {response.status_code}")
+    
+    def close_sessions(self):
+        if self.token is None or self.api_key is None:
+            raise Exception("You must log in before closing a session.")
+        url = f"{self.api_url}/sessions"
+        response = requests.delete(url)
         if response.ok:  # checks if status_code is 200-400
             try:
                 return response.json()["response"]
@@ -442,6 +455,9 @@ def update_session(sessionId, data):
 
 def close_session(sessionId):
     return _multion_instance.close_session(sessionId)
+
+def close_sessions():
+    return _multion_instance.close_sessions()
 
 
 def list_sessions():
