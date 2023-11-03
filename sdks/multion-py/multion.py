@@ -216,7 +216,7 @@ class _Multion:
         return headers
 
     def post(self, url, data, sessionId=None):
-        if self.token is None or self.api_key is None:
+        if self.token is None and self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
             )
@@ -261,7 +261,7 @@ class _Multion:
             raise Exception("Failed to get a valid response after 5 attempts")
 
     def get(self):
-        if self.token is None or self.api_key is None:
+        if self.token is None and self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
             )
@@ -299,7 +299,7 @@ class _Multion:
             print(f"Failed to close session. Status code: {response.status_code}")
     
     def close_sessions(self):
-        if self.token is None or self.api_key is None:
+        if self.token is None and self.api_key is None:
             raise Exception("You must log in before closing a session.")
         url = f"{self.api_url}/sessions"
         response = requests.delete(url)
