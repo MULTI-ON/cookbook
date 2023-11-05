@@ -1,0 +1,5 @@
+sdks/multion-js/node_modules
+sdks/multion-ts/node_modules
+sdks/multion-py/multion/secrets.json
+sdks/multion-py/dist
+sdks/multion-py/poetry.lock
