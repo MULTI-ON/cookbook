@@ -8,7 +8,6 @@ import pytesseract
 from PIL import Image
 
 
-
 class MultionToolSpec:
     """MultiOn tool spec."""
 
@@ -19,10 +18,11 @@ class MultionToolSpec:
         token_file: Optional[str] = "multion_token.txt",
         default_url: Optional[str] = "https://google.com",
         mode: Optional[str] = "auto",
+        use_api: Optional[bool] = False,
     ) -> None:
         """Initialize with parameters."""
-
-        multion.login()
+        multion.refresh_token()
+        multion.login(use_api=use_api)
 
         self.current_status = "NOT_ACTIVE"
         self.session_id = None
@@ -42,7 +42,6 @@ class MultionToolSpec:
             instruction (str): The detailed and specific natural language instruction for web browsing
             url (str): The best URL to start the session based on user instruction
         """
-
         multion.set_remote(False)
 
         # If a session exists, update it. Otherwise, create a new session.
@@ -60,7 +59,7 @@ class MultionToolSpec:
         # Update the current status and URL based on the session
         self._update_status(session)
 
-        while self.mode == "auto" and self.current_status == "CONTINUE":
+        while self.mode == "auto" and (self.current_status == "CONTINUE"):
             session = multion.update_session(
                 self.session_id, {"input": instruction, "url": self.current_url}
             )
@@ -101,8 +100,6 @@ class MultionToolSpec:
         self.current_url = session["url"]
 
     def _read_screenshot(self, screenshot) -> str:
-
-
         image_bytes = screenshot.replace("data:image/png;base64,", "")
         image = Image.open(self._bytes_to_image(image_bytes))
 

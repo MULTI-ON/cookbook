@@ -247,7 +247,7 @@ class _Multion:
             else:
                 print(f"Request failed with status code: {response.status_code}")
                 print(f"Response text: {response.text}")
-            
+
             # If we've not returned by now, sleep before the next attempt
             time.sleep(1)  # you may want to increase this value depending on the API
 
@@ -297,7 +297,7 @@ class _Multion:
                 print(f"ERROR: {e}")
         else:
             print(f"Failed to close session. Status code: {response.status_code}")
-    
+
     def close_sessions(self):
         if self.token is None and self.api_key is None:
             raise Exception("You must log in before closing a session.")
@@ -455,6 +455,7 @@ def update_session(sessionId, data):
 
 def close_session(sessionId):
     return _multion_instance.close_session(sessionId)
+
 
 def close_sessions():
     return _multion_instance.close_sessions()
