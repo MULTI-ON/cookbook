@@ -17,7 +17,7 @@ from .multion import (
     get_remote
 )
 
-from . import browse
+from .browse import MultionToolSpec
 
 from importlib import metadata
 
