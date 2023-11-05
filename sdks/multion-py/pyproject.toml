@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "multion"
-version = "0.2.12"
+version = "0.2.13"
 description = "MULTION API"
 authors = ["Div Garg"]
-include = ["secrets.json", "browse.py"]
+include = ["multion/secrets.json, multion/*.py"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -15,6 +15,7 @@ cryptography = "^41.0.1"
 ipython = "^8.1.0"
 cognitojwt = "^1.4.1"
 pillow = "^10.0.1"
+pytesseract = "^0.3.10"
 
 
 [build-system]
