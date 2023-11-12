@@ -86,7 +86,7 @@ class _Multion:
         if use_api:
             if self.api_key is not None:
                 # TODO: Verify the API key
-                print("Already logged in usign API key.")
+                print("Already logged in using API key.")
                 return
             else:
                 self.issue_api_key()
@@ -136,7 +136,7 @@ class _Multion:
 
     def issue_api_key(self):
         # Get the authorization URL
-        app_url = "https://app.multion.ai"
+        app_url = "https://app.multion.ai/api-tokens"
 
         try:
             # Try to open the authorization URL in a new browser tab
@@ -185,10 +185,7 @@ class _Multion:
 
         def token_saver(token):
             self.token = token
-
-            encrypted_token = self.fernet.encrypt(json.dumps(self.token).encode())
-            with open(self.token_file, "wb") as f:
-                f.write(encrypted_token)
+            self.save_token()
 
         client = OAuth2Session(
             self.multion_id,
