@@ -1,4 +1,5 @@
 sdks/multion-js/node_modules
+sdks/multion-js/dist
 sdks/multion-ts/node_modules
 sdks/multion-py/multion/secrets.json
 sdks/multion-py/dist
