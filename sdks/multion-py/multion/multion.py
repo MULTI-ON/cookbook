@@ -137,6 +137,7 @@ class _Multion:
     def issue_api_key(self):
         # Get the authorization URL
         app_url = "https://app.multion.ai/api-tokens"
+        print("Please visit this URL to generate an API Key: " + app_url)
 
         try:
             # Try to open the authorization URL in a new browser tab
