@@ -20,7 +20,6 @@ class _Multion:
         self.token = None
         self.token_file = token_file
         self.api_url = "https://api.multion.ai"
-        self.auth_url = "https://auth.multion.ai"
 
         # Get the API key from the environment variable
         self.api_key = os.getenv("MULTION_API_KEY")
@@ -36,12 +35,6 @@ class _Multion:
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
         with open(secrets_file, "r") as f:
             secrets = json.load(f)
-
-        self.multion_id = secrets["MULTION_CLIENT_ID"]
-        self.multion_secret = secrets["MULTION_CLIENT_SECRET"]
-        self.user_pool_id = secrets["COGNITO_USER_POOL_ID"]
-        self.region = secrets["AWS_REGION"]
-        self.refresh_url = "https://auth.multion.ai/oauth2/token"
 
         self.fernet_key = secrets.get("FERNET_KEY")
         if self.fernet_key is None:
@@ -71,47 +64,48 @@ class _Multion:
         self.token_file = os.path.join(self.multion_dir, "multion_token.enc")
         self.is_remote = False
 
-    def verify_cognito_token(self):
-        try:
-            verified_claims = cognitojwt.decode(
-                self.token["id_token"], self.region, self.user_pool_id
-            )
-            return verified_claims
-        except Exception as e:
-            # Token verification failed
-            print("Could not verify token: ", e)
-            return None
+    def verify_user(self, use_api=False):
+        headers = {}
+        if use_api:
+            if self.api_key is not None:
+                headers["X_MULTION_API_KEY"] = self.api_key
+        if self.token is not None:
+            headers["Authorization"] = f"Bearer {self.token['access_token']}"
+
+        if not headers:
+            return False
+
+        url = f"{self.api_url}/verify_user"
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            data = response.json()
+            if "status" in data:
+                return data["status"]
+            else:
+                print(f"Status not found, {data}")
+        else:
+            print(f"An error occurred while verifying user: {str(response)}")
+            return False
 
     def login(self, use_api=False):
         if use_api:
-            if self.api_key is not None:
-                # TODO: Verify the API key
-                print("Already logged in using API key.")
+            valid_api_key = self.verify_user(use_api)
+            if valid_api_key:
+                print("Logged in using API key.")
                 return
             else:
                 self.issue_api_key()
                 return
 
-        if self.token is not None:
-            verified_claims = self.verify_cognito_token()
-            if verified_claims:
-                print("Already logged in.")
-                return
+        valid_token = self.verify_user()
+        if valid_token:
+            print("Logged in.")
+            return
 
         # Create a unique client id
         self.client_id = self.register_client()
-
-        # OAuth endpoints
-        authorization_base_url = "https://auth.multion.ai/oauth2/authorize"
-        redirect_uri = "https://api.multion.ai/callback"
-
-        # Create an OAuth2 session
-        oauth = OAuth2Session(
-            self.multion_id, redirect_uri=redirect_uri, state=self.client_id
-        )
-
-        # Get the authorization URL
-        authorization_url, state = oauth.authorization_url(authorization_base_url)
+        authorization_url = self.get_auth_url()
 
         try:
             # Try to open the authorization URL in a new browser tab
@@ -154,7 +148,7 @@ class _Multion:
         mac_num = uuid.getnode()
         mac = ":".join(("%012X" % mac_num)[i : i + 2] for i in range(0, 12, 2))
         device_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, mac)
-        print(device_uuid)
+        # print(device_uuid)
 
         # TODO: Register the client with the backend to the user
         return device_uuid
@@ -176,34 +170,22 @@ class _Multion:
             f.write(encrypted_token)
 
     def refresh_token(self):
-        # OAuth endpoints
-        token_url = "https://auth.multion.ai/oauth2/token"
-
-        extra = {
-            "client_id": self.multion_id,
-            "client_secret": self.multion_secret,
-        }
-
         def token_saver(token):
             self.token = token
             self.save_token()
 
-        client = OAuth2Session(
-            self.multion_id,
-            token=self.token,
-            auto_refresh_url=token_url,
-            auto_refresh_kwargs=extra,
-            token_updater=token_saver,
+        response = requests.post(
+            f"https://api.multion.ai/refresh_token?client_id={self.client_id}"
         )
-
-        try:
-            # Pass the old refresh token to refresh the access token
-            new_token = client.refresh_token(
-                token_url, refresh_token=self.token["refresh_token"]
-            )
-            token_saver(new_token)
-        except Exception as e:
-            print(f"An error occurred while refreshing token: {str(e)}")
+        if response.status_code == 200:
+            data = response.json()
+            if "access_token" in data:
+                token = data["access_token"]
+                token_saver(token)
+            else:
+                print(f"Token not found, {data}")
+        else:
+            print(f"An error occurred while refreshing token: {str(response)}")
 
     def set_headers(self):
         headers = {}
@@ -315,6 +297,21 @@ class _Multion:
 
     def list_sessions(self):
         return self.get()
+
+    def get_auth_url(self):
+        response = requests.get(
+            f"https://api.multion.ai/authorization_url?client_id={self.client_id}"
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if "authorization_url" in data:
+                return data["authorization_url"]
+            else:
+                # print(f"Token not found, {data}")
+                return None
+        else:
+            print("Failed to get authorization url")
+            return None
 
     def get_token(self):
         if self.token is not None and self.token["expires_at"] > time.time():

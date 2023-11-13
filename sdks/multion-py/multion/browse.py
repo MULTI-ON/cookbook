@@ -21,7 +21,6 @@ class MultionToolSpec:
         use_api: Optional[bool] = False,
     ) -> None:
         """Initialize with parameters."""
-        multion.refresh_token()
         multion.login(use_api=use_api)
 
         self.current_status = "NOT_ACTIVE"

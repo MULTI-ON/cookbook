@@ -21,7 +21,7 @@ from multion import MultionToolSpec
 
 
 def agent(query: str):
-    multion_toolkit = MultionToolSpec()
+    multion_toolkit = MultionToolSpec(use_api=False, mode="auto")
 
     tool = StructuredTool.from_function(multion_toolkit.browse)
 
