@@ -3,7 +3,7 @@ import os
 import webbrowser
 import requests
 from cryptography.fernet import Fernet
-from requests_oauthlib import OAuth2Session
+# from requests_oauthlib import OAuth2Session
 import json
 import time
 import base64
@@ -12,12 +12,10 @@ from PIL import Image
 from io import BytesIO
 from IPython.display import display, Video
 
-import cognitojwt
-
-
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
         self.token = None
+        self.client_id = self.register_client()
         self.token_file = token_file
         self.api_url = "https://api.multion.ai"
 
@@ -55,7 +53,8 @@ class _Multion:
         try:
             os.makedirs(self.multion_dir, exist_ok=True)
         except PermissionError:
-            # In case of restricted permissions in the home directory (like on Google Colab),
+            # In case of restricted permissions in the home directory 
+            # (like on Google Colab),
             # we use a temporary directory
             import tempfile
 
@@ -71,7 +70,7 @@ class _Multion:
                 headers["X_MULTION_API_KEY"] = self.api_key
         if self.token is not None:
             headers["Authorization"] = f"Bearer {self.token['access_token']}"
-
+        print("HEADERS", headers)
         if not headers:
             return False
 
@@ -97,7 +96,7 @@ class _Multion:
             else:
                 self.issue_api_key()
                 return
-
+        print("Verify User", self.verify_user())
         valid_token = self.verify_user()
         if valid_token:
             print("Logged in.")
@@ -217,12 +216,14 @@ class _Multion:
             elif response.status_code == 401:  # token has expired
                 print("Invalid token. Refreshing...")
                 self.refresh_token()  # Refresh the token
-                headers[
+                # Update the authorization header
+                headers[ 
                     "Authorization"
-                ] = f"Bearer {self.token['access_token']}"  # Update the authorization header
+                ] = f"Bearer {self.token['access_token']}"  
             elif response.status_code == 404:  # server not connected
                 print(
-                    "Server Disconnected. Please press connect in the Multion extension popup"
+                    """Server Disconnected. Please press connect in the
+                      Multion extension popup"""
                 )
             else:
                 print(f"Request failed with status code: {response.status_code}")
@@ -307,7 +308,7 @@ class _Multion:
             if "authorization_url" in data:
                 return data["authorization_url"]
             else:
-                # print(f"Token not found, {data}")
+                print(f"Token not found, {data}")
                 return None
         else:
             print("Failed to get authorization url")
@@ -332,6 +333,8 @@ class _Multion:
             return None
 
     def delete_token(self):
+        if self.token:
+            self.token = None
         if os.path.exists("multion_token.txt"):
             os.remove("multion_token.txt")
         else:
@@ -354,11 +357,13 @@ class _Multion:
         original_width, original_height = img.size
 
         if height is not None and width is None:
-            # If only the height is provided, calculate the width while preserving the aspect ratio
+            # If only the height is provided, calculate the width while
+            #  preserving the aspect ratio
             width = int((height / original_height) * original_width)
 
         elif width is not None and height is None:
-            # If only the width is provided, calculate the height while preserving the aspect ratio
+            # If only the width is provided, calculate the height while
+            #  preserving the aspect ratio
             height = int((width / original_width) * original_height)
 
         # Resize the image if either dimension was provided
