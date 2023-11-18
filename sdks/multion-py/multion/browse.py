@@ -41,7 +41,7 @@ class MultionToolSpec:
             instruction (str): The detailed and specific natural language instruction for web browsing
             url (str): The best URL to start the session based on user instruction
         """
-        multion.set_remote(False)
+        # multion.set_remote(False)
 
         # If a session exists, update it. Otherwise, create a new session.
         if self.session_id:

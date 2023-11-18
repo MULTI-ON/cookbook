@@ -21,6 +21,7 @@ from multion import MultionToolSpec
 
 def agent(query: str):
     multion_toolkit = MultionToolSpec(use_api=True, mode="auto")
+    # multion.set_remote(True)
 
     tool = StructuredTool.from_function(multion_toolkit.browse)
     human_input = HumanInputRun()
