@@ -68,9 +68,10 @@ class _Multion:
         if use_api:
             if self.api_key is not None:
                 headers["X_MULTION_API_KEY"] = self.api_key
+            else:
+                return False
         if self.token is not None:
             headers["Authorization"] = f"Bearer {self.token['access_token']}"
-        print("HEADERS", headers)
         if not headers:
             return False
 
@@ -87,7 +88,9 @@ class _Multion:
             print(f"An error occurred while verifying user: {str(response)}")
             return False
 
-    def login(self, use_api=False):
+    def login(self, use_api=False, multion_api_key = None):
+        if multion_api_key:
+            self.api_key = multion_api_key 
         if use_api:
             valid_api_key = self.verify_user(use_api)
             if valid_api_key:
@@ -96,7 +99,7 @@ class _Multion:
             else:
                 self.issue_api_key()
                 return
-        print("Verify User", self.verify_user())
+
         valid_token = self.verify_user()
         if valid_token:
             print("Logged in.")
@@ -204,14 +207,17 @@ class _Multion:
 
         attempts = 0
         while attempts < 5:  # tries up to 5 times
-            response = requests.post(url, json=data, headers=headers)
+            try:
+                response = requests.post(url, json=data, headers=headers)
+            except requests.exceptions.RequestException as e:
+                print(f"Request failed due to an error: {e}")
+                break
 
             if response.ok:  # checks if status_code is 200-400
                 try:
                     return response.json()["response"]["data"]
                 except json.JSONDecodeError:
                     print("JSONDecodeError: The server didn't respond with valid JSON.")
-
                 break  # if response is valid then exit loop
             elif response.status_code == 401:  # token has expired
                 print("Invalid token. Refreshing...")
@@ -236,7 +242,7 @@ class _Multion:
             attempts += 1
 
         # If we've exhausted all attempts and not returned, raise an error
-        if attempts == 1:
+        if attempts == 5:
             print(f"Request failed with status code: {response.status_code}")
             print(f"Response text: {response.text}")
             raise Exception("Failed to get a valid response after 5 attempts")
@@ -375,7 +381,13 @@ class _Multion:
         display(img)
 
     def get_remote(self):
-        response = requests.get(f"{self.api_url}/is_remote")
+        if self.token is None and self.api_key is None:
+            raise Exception(
+                "You must log in or provide an API key before making API calls."
+            )
+
+        headers = self.set_headers()
+        response = requests.get(f"{self.api_url}/is_remote",  headers=headers)
         if response.status_code == 200:
             data = response.json()
             return data["is_remote"]
@@ -384,9 +396,15 @@ class _Multion:
             return False
 
     def set_remote(self, value: bool):
+        if self.token is None and self.api_key is None:
+            raise Exception(
+                "You must log in or provide an API key before making API calls."
+            )
+
+        headers = self.set_headers()
         data = {"value": value}
         url = f"{self.api_url}/is_remote"
-        response = requests.post(url, json=data)
+        response = requests.post(url, json=data,  headers=headers)
         if response.ok:  # checks if status_code is 200-400
             try:
                 data = response.json()
@@ -437,8 +455,8 @@ def get_api_key():
 
 
 # Expose the login and post methods at the module level
-def login(use_api=False):
-    _multion_instance.login(use_api)
+def login(use_api=False, multion_api_key = None):
+    _multion_instance.login(use_api, multion_api_key)
 
 
 def post(url, data):
