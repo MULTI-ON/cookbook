@@ -3,11 +3,8 @@ import os
 from io import BytesIO
 from typing import Optional
 
-from langchain import (
-    LLMMathChain,
-    OpenAI,
-    SerpAPIWrapper,
-)
+from langchain.llms import OpenAI
+
 from langchain.agents import initialize_agent, Tool
 from langchain.agents import AgentType
 from langchain.chat_models import ChatOpenAI
@@ -15,21 +12,24 @@ from langchain.chat_models import ChatOpenAI
 os.environ["LANGCHAIN_TRACING"] = "true"
 # os.environ['OPENAI_API_KEY'] = "<openai_api_key>"
 from langchain.tools import StructuredTool
+from human_input import HumanInputRun
+
 
 import multion
 from multion import MultionToolSpec
 
 
 def agent(query: str):
-    multion_toolkit = MultionToolSpec(use_api=False, mode="auto")
+    multion_toolkit = MultionToolSpec(use_api=True, mode="auto")
 
     tool = StructuredTool.from_function(multion_toolkit.browse)
+    human_input = HumanInputRun()
 
     llm = OpenAI(temperature=0)
 
     # Structured tools are compatible with the STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION agent type.
     agent_executor = initialize_agent(
-        [tool],
+        [tool, human_input],
         llm,
         agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         verbose=True,
