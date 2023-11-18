@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "multion"
-version = "0.2.18"
+version = "0.2.19"
 description = "MULTION API"
 authors = ["Div Garg"]
-include = ["multion/.secrets.json, multion/*.py"]
+include = ["multion/*"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
