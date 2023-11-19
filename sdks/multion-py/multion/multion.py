@@ -3,6 +3,7 @@ import os
 import webbrowser
 import requests
 from cryptography.fernet import Fernet
+
 # from requests_oauthlib import OAuth2Session
 import json
 import time
@@ -12,6 +13,7 @@ from PIL import Image
 from io import BytesIO
 from IPython.display import display, Video
 
+
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
         self.token = None
@@ -19,8 +21,7 @@ class _Multion:
         self.token_file = token_file
         self.api_url = "https://api.multion.ai"
 
-        # Get the API key from the environment variable
-        self.api_key = os.getenv("MULTION_API_KEY")
+        self._api_key = None  # Add this line
 
         self.load_secrets(secrets_file)
         self.generate_fernet_key()
@@ -28,6 +29,16 @@ class _Multion:
 
         # Load token if it exists
         self.load_token()
+
+    @property
+    def api_key(self):
+        # Get the API key from the instance variable or the environment variable
+        return self._api_key or os.getenv("MULTION_API_KEY")
+
+    @api_key.setter
+    def api_key(self, value):
+        # Allow setting the API key manually
+        self._api_key = value
 
     def load_secrets(self, secrets_file):
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
@@ -53,7 +64,7 @@ class _Multion:
         try:
             os.makedirs(self.multion_dir, exist_ok=True)
         except PermissionError:
-            # In case of restricted permissions in the home directory 
+            # In case of restricted permissions in the home directory
             # (like on Google Colab),
             # we use a temporary directory
             import tempfile
@@ -88,9 +99,9 @@ class _Multion:
             print(f"An error occurred while verifying user: {str(response)}")
             return False
 
-    def login(self, use_api=False, multion_api_key = None):
+    def login(self, use_api=False, multion_api_key=None):
         if multion_api_key:
-            self.api_key = multion_api_key 
+            self.api_key = multion_api_key
         if use_api:
             valid_api_key = self.verify_user(use_api)
             if valid_api_key:
@@ -223,9 +234,7 @@ class _Multion:
                 print("Invalid token. Refreshing...")
                 self.refresh_token()  # Refresh the token
                 # Update the authorization header
-                headers[ 
-                    "Authorization"
-                ] = f"Bearer {self.token['access_token']}"  
+                headers["Authorization"] = f"Bearer {self.token['access_token']}"
             elif response.status_code == 404:  # server not connected
                 print(
                     """Server Disconnected. Please press connect in the
@@ -387,7 +396,7 @@ class _Multion:
             )
 
         headers = self.set_headers()
-        response = requests.get(f"{self.api_url}/is_remote",  headers=headers)
+        response = requests.get(f"{self.api_url}/is_remote", headers=headers)
         if response.status_code == 200:
             data = response.json()
             return data["is_remote"]
@@ -404,7 +413,7 @@ class _Multion:
         headers = self.set_headers()
         data = {"value": value}
         url = f"{self.api_url}/is_remote"
-        response = requests.post(url, json=data,  headers=headers)
+        response = requests.post(url, json=data, headers=headers)
         if response.ok:  # checks if status_code is 200-400
             try:
                 data = response.json()
@@ -455,7 +464,7 @@ def get_api_key():
 
 
 # Expose the login and post methods at the module level
-def login(use_api=False, multion_api_key = None):
+def login(use_api=False, multion_api_key=None):
     _multion_instance.login(use_api, multion_api_key)
 
 
