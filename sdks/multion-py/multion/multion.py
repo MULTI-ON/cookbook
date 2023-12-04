@@ -102,6 +102,9 @@ class _Multion:
     def login(self, use_api=False, multion_api_key=None):
         if multion_api_key:
             self.api_key = multion_api_key
+        elif self.api_key is None:
+            self.api_key = os.getenv("MULTION_API_KEY")
+
         if use_api:
             valid_api_key = self.verify_user(use_api)
             if valid_api_key:
@@ -188,7 +191,7 @@ class _Multion:
             self.save_token()
 
         response = requests.post(
-            f"https://api.multion.ai/refresh_token?client_id={self.client_id}"
+            f"{self.api_url}/refresh_token?client_id={self.client_id}"
         )
         if response.status_code == 200:
             data = response.json()
@@ -316,7 +319,7 @@ class _Multion:
 
     def get_auth_url(self):
         response = requests.get(
-            f"https://api.multion.ai/authorization_url?client_id={self.client_id}"
+            f"{self.api_url}/authorization_url?client_id={self.client_id}"
         )
         if response.status_code == 200:
             data = response.json()
@@ -333,9 +336,7 @@ class _Multion:
         if self.token is not None and self.token["expires_at"] > time.time():
             return self.token
 
-        response = requests.get(
-            f"https://api.multion.ai/get_token?client_id={self.client_id}"
-        )
+        response = requests.get(f"{self.api_url}/get_token?client_id={self.client_id}")
         if response.status_code == 200:
             data = response.json()
             if "access_token" in data:
