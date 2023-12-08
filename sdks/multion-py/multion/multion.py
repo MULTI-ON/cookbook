@@ -294,7 +294,7 @@ class _Multion:
 
         if response.ok:  # checks if status_code is 200-400
             try:
-                return response.json()["response"]
+                return response.json()["response"]["data"]
             except Exception as e:
                 print(f"ERROR: {e}")
         else:
