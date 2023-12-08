@@ -21,7 +21,7 @@ class _Multion:
         self.token_file = token_file
         self.api_url = "https://api.multion.ai"
 
-        self._api_key = None  # Add this line
+        self._api_key = os.getenv("MULTION_API_KEY")  # Add this line
 
         self.load_secrets(secrets_file)
         self.generate_fernet_key()
@@ -33,7 +33,7 @@ class _Multion:
     @property
     def api_key(self):
         # Get the API key from the instance variable or the environment variable
-        return self._api_key or os.getenv("MULTION_API_KEY")
+        return self._api_key if self._api_key else os.getenv("MULTION_API_KEY")
 
     @api_key.setter
     def api_key(self, value):
