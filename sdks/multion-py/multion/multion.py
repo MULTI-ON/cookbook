@@ -360,7 +360,7 @@ class _Multion:
         screenshot = response["screenshot"]
 
         # Check if screenshot is a URL
-        if screenshot.startswith('http://') or screenshot.startswith('https://'):
+        if screenshot.startswith("http://") or screenshot.startswith("https://"):
             # screenshot is a URL
             response = requests.get(screenshot)
             if response.status_code != 200:
@@ -375,7 +375,7 @@ class _Multion:
 
         # Create a BytesIO object and read the image bytes
         img_io = BytesIO(img_bytes)
-        
+
         # Convert BytesIO into Image
         img = Image.open(img_io)
 
@@ -469,10 +469,12 @@ def api_key():
     global _multion_instance
     return _multion_instance.api_key
 
+
 @api_key.setter
 def api_key(value):
     global _multion_instance
     _multion_instance.api_key = value
+
 
 # Expose the login and post methods at the module level
 def login(use_api=False, multion_api_key=None):
