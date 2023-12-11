@@ -15,7 +15,8 @@ from .multion import (
     get_video,
     set_remote,
     get_remote,
-    set_api_url
+    set_api_url,
+    api_key
 )
 
 from .browse import MultionToolSpec
