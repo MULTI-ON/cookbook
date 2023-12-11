@@ -375,7 +375,6 @@ class _Multion:
 
         # Create a BytesIO object and read the image bytes
         img_io = BytesIO(img_bytes)
-
         # Convert BytesIO into Image
         img = Image.open(img_io)
 
@@ -469,6 +468,10 @@ def api_key():
     global _multion_instance
     return _multion_instance.api_key
 
+@api_key.setter
+def api_key(value):
+    global _multion_instance
+    _multion_instance.api_key = value
 
 @api_key.setter
 def api_key(value):
