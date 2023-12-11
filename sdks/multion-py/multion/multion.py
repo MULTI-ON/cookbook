@@ -11,7 +11,7 @@ import base64
 import uuid
 from PIL import Image
 from io import BytesIO
-from IPython.display import display, Video
+from IPython.display import Video
 
 
 class _Multion:
@@ -294,7 +294,7 @@ class _Multion:
 
         if response.ok:  # checks if status_code is 200-400
             try:
-                return response.json()["response"]["data"]
+                return response.json()["response"]
             except Exception as e:
                 print(f"ERROR: {e}")
         else:
@@ -359,14 +359,24 @@ class _Multion:
     def get_screenshot(self, response, height=None, width=None):
         screenshot = response["screenshot"]
 
-        # Remove the "data:image/png;base64," part from the string
-        base64_img_bytes = screenshot.replace("data:image/png;base64,", "")
-
-        # Decode the base64 string back to bytes
-        img_bytes = base64.b64decode(base64_img_bytes)
+        # Check if screenshot is a URL
+        if screenshot.startswith('http://') or screenshot.startswith('https://'):
+            # screenshot is a URL
+            response = requests.get(screenshot)
+            if response.status_code != 200:
+                print(f"Failed to retrieve image from {screenshot}")
+                return None
+            img_bytes = response.content
+        else:
+            # screenshot is a base64 string
+            base64_img_bytes = screenshot.replace("data:image/png;base64,", "")
+            base64_img_bytes += "=" * ((4 - len(base64_img_bytes) % 4) % 4)
+            img_bytes = base64.b64decode(base64_img_bytes)
 
         # Create a BytesIO object and read the image bytes
         img_io = BytesIO(img_bytes)
+        
+        # Convert BytesIO into Image
         img = Image.open(img_io)
 
         # Get the original image dimensions
@@ -387,8 +397,8 @@ class _Multion:
             new_dimensions = (width, height)  # width, height
             img = img.resize(new_dimensions, Image.LANCZOS)
 
-        # Display the image in Jupyter Notebook
-        display(img)
+        # Return the image
+        return img
 
     def get_remote(self):
         if self.token is None and self.api_key is None:
@@ -453,16 +463,16 @@ class _Multion:
 _multion_instance = _Multion()
 
 
-# Expose the set_api_key method at the module level
-def set_api_key(api_key):
-    global _multion_instance
-    _multion_instance.api_key = api_key
-
-
-def get_api_key():
+# Delegate the api_key getter and setter to _multion_instance
+@property
+def api_key():
     global _multion_instance
     return _multion_instance.api_key
 
+@api_key.setter
+def api_key(value):
+    global _multion_instance
+    _multion_instance.api_key = value
 
 # Expose the login and post methods at the module level
 def login(use_api=False, multion_api_key=None):
@@ -529,5 +539,4 @@ def set_api_url(url: str):
     _multion_instance.set_api_url(url)
 
 
-# Add these lines at the end of the file
-api_key = property(get_api_key, set_api_key)
+# api_key = property(api_key, api_key)
