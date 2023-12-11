@@ -16,6 +16,7 @@ from .multion import (
     set_remote,
     get_remote,
     set_api_url,
+    api_key
 )
 
 from .browse import MultionToolSpec
