@@ -1,3 +1,5 @@
+env*
+
 sdks/multion-js/node_modules
 sdks/multion-js/dist
 sdks/multion-ts/node_modules
