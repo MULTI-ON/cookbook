@@ -12,7 +12,7 @@ import uuid
 from PIL import Image
 from io import BytesIO
 from IPython.display import Video
-from agentops import Client, Event
+from agentops import Client, Event, helpers
 
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
@@ -136,10 +136,8 @@ class _Multion:
         
 		# WIP INTEGRATION OF AGENTOPS
         self.agentops_client = Client(api_key=self.agentops_api_key,
-                   tags=['multion-howie2'])
+                   tags=['multion-howie'])
         
-        self.agentops_client.record(Event(event_type='ligma'))
-
         valid_token = self.verify_user()
         if valid_token:
             print("Logged in.")
@@ -240,6 +238,8 @@ class _Multion:
     def post(self, url, data, sessionId=None):
 
         # TODO: Start time
+        from datetime import datetime
+        init_timestamp = datetime.utcfromtimestamp(time.time()).isoformat(timespec='milliseconds') + 'Z' #TODO: get_ISO_time()
 
         error_messages = ""
 
@@ -264,9 +264,22 @@ class _Multion:
 
             if response.ok:  # checks if status_code is 200-400
                 try:
-                    # TODO: Set error string
-                    # TODO: agentops record action
-                    return response.json()["response"]["data"]
+                    response_json = response.json()["response"]["data"]
+
+                    self.agentops_client.record(Event(
+                        event_type="multion new_session/update_session",
+                        result='Success',
+                        returns={"finish_reason": "Success",
+                                 "content": response_json},
+                        action_type='api',
+                        init_timestamp=init_timestamp
+                    ))
+
+                    self.agentops_client.end_session("Success")
+
+                    print("should send to agentops")
+
+                    return response_json
                 except json.JSONDecodeError:
                     error_messages += "JSONDecodeError: The server didn't respond with valid JSON.\n"
                 break  # if response is valid then exit loop
@@ -434,9 +447,9 @@ class _Multion:
             
         print("sending screenshot to agentops")
         self.agentops_client.record(Event(
-                    event_type = 'screenshot',
-                    result='Success',
-                    action_type='api',
+                    event_type = "screenshot",
+                    result="Success",
+                    action_type="api",
                     screenshot=img,
                 ))
         
