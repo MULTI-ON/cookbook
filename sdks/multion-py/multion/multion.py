@@ -12,7 +12,7 @@ import uuid
 from PIL import Image
 from io import BytesIO
 from IPython.display import Video
-
+from agentops import Client, Event
 
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
@@ -22,6 +22,9 @@ class _Multion:
         self.api_url = "https://api.multion.ai"
 
         self._api_key = os.getenv("MULTION_API_KEY")  # Add this line
+        self._agentops_api_key = os.getenv("AGENTOPS_API_KEY")
+        
+        self.agentops_client = None
 
         self.load_secrets(secrets_file)
         self.generate_fernet_key()
@@ -39,6 +42,16 @@ class _Multion:
     def api_key(self, value):
         # Allow setting the API key manually
         self._api_key = value
+    
+    @property
+    def agentops_api_key(self):
+        # Get the AgentOps API key from the instance variable or the environment variable
+        return self._agentops_api_key if self._agentops_api_key else os.getenv("AGENTOPS_API_KEY")
+    
+    @agentops_api_key.setter
+    def agentops_api_key(self, value):
+        # Allow setting the AgentOps API key manually
+        self._agentops_api_key = value
 
     def load_secrets(self, secrets_file):
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
@@ -99,11 +112,17 @@ class _Multion:
             print(f"An error occurred while verifying user: {str(response)}")
             return False
 
-    def login(self, use_api=False, multion_api_key=None):
+    def login(self, use_api=False, multion_api_key=None, agentops_api_key=None):      
+   
         if multion_api_key:
             self.api_key = multion_api_key
         elif self.api_key is None:
             self.api_key = os.getenv("MULTION_API_KEY")
+
+        if agentops_api_key:
+            self.agentops_api_key = agentops_api_key
+        elif self.agentops_api_key is None:
+            self.agentops_api_key = os.getenv("AGENTOPS_API_KEY")
 
         if use_api:
             valid_api_key = self.verify_user(use_api)
@@ -113,6 +132,13 @@ class _Multion:
             else:
                 self.issue_api_key()
                 return
+
+        
+		# WIP INTEGRATION OF AGENTOPS
+        self.agentops_client = Client(api_key=self.agentops_api_key,
+                   tags=['multion-howie2'])
+        
+        self.agentops_client.record(Event(event_type='ligma'))
 
         valid_token = self.verify_user()
         if valid_token:
@@ -210,9 +236,18 @@ class _Multion:
         if self.token is not None:
             headers["Authorization"] = f"Bearer {self.token['access_token']}"
         return headers
-
+    
     def post(self, url, data, sessionId=None):
+
+        # TODO: Start time
+
+        error_messages = ""
+
         if self.token is None and self.api_key is None:
+            # TODO: Set error string
+			# TODO: agentops record action
+		    # TODO: print error string
+
             raise Exception(
                 "You must log in or provide an API key before making API calls."
             )
@@ -224,41 +259,41 @@ class _Multion:
             try:
                 response = requests.post(url, json=data, headers=headers)
             except requests.exceptions.RequestException as e:
-                print(f"Request failed due to an error: {e}")
+                error_messages += f"Request failed due to an error: {e}\n"
                 break
 
             if response.ok:  # checks if status_code is 200-400
                 try:
+                    # TODO: Set error string
+                    # TODO: agentops record action
                     return response.json()["response"]["data"]
                 except json.JSONDecodeError:
-                    print("JSONDecodeError: The server didn't respond with valid JSON.")
+                    error_messages += "JSONDecodeError: The server didn't respond with valid JSON.\n"
                 break  # if response is valid then exit loop
             elif response.status_code == 401:  # token has expired
-                print("Invalid token. Refreshing...")
+                error_messages += "Invalid token. Refreshing...\n"
                 self.refresh_token()  # Refresh the token
-                # Update the authorization header
                 headers["Authorization"] = f"Bearer {self.token['access_token']}"
             elif response.status_code == 404:  # server not connected
-                print(
-                    """Server Disconnected. Please press connect in the
-                      Multion extension popup"""
-                )
+                error_messages += "Server Disconnected. Please press connect in the Multion extension popup\n"
             else:
-                print(f"Request failed with status code: {response.status_code}")
-                print(f"Response text: {response.text}")
+                error_messages += f"Request failed with status code: {response.status_code}\n"
+                error_messages += f"Response text: {response.text}\n"
 
-            # If we've not returned by now, sleep before the next attempt
             time.sleep(1)  # you may want to increase this value depending on the API
-
-            # Increment the attempts counter
             attempts += 1
 
-        # If we've exhausted all attempts and not returned, raise an error
-        if attempts == 5:
-            print(f"Request failed with status code: {response.status_code}")
-            print(f"Response text: {response.text}")
-            raise Exception("Failed to get a valid response after 5 attempts")
+            if error_messages:
+                print(error_messages)
 
+        if attempts == 5:
+            error_messages += f"Request failed with status code: {response.status_code}\n"
+            error_messages += f"Response text: {response.text}\n"
+            raise Exception("Failed to get a valid response after 5 attempts") # TODO: Catch with agentops in calling function?
+
+        if error_messages:
+            print(error_messages)
+        
     def get(self):
         if self.token is None and self.api_key is None:
             raise Exception(
@@ -396,7 +431,15 @@ class _Multion:
         if height is not None and width is not None:
             new_dimensions = (width, height)  # width, height
             img = img.resize(new_dimensions, Image.LANCZOS)
-
+            
+        print("sending screenshot to agentops")
+        self.agentops_client.record(Event(
+                    event_type = 'screenshot',
+                    result='Success',
+                    action_type='api',
+                    screenshot=img,
+                ))
+        
         # Return the image
         return img
 
@@ -477,8 +520,8 @@ def api_key(value):
 
 
 # Expose the login and post methods at the module level
-def login(use_api=False, multion_api_key=None):
-    _multion_instance.login(use_api, multion_api_key)
+def login(use_api=False, multion_api_key=None, agentops_api_key=None):
+    _multion_instance.login(use_api, multion_api_key, agentops_api_key)
 
 
 def post(url, data):
@@ -487,7 +530,6 @@ def post(url, data):
 
 def get():
     return _multion_instance.get()
-
 
 def new_session(data):
     return _multion_instance.new_session(data)
