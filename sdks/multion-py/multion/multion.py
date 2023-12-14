@@ -12,7 +12,8 @@ import uuid
 from PIL import Image
 from io import BytesIO
 from IPython.display import Video
-from agentops import Client, Event, helpers
+from agentops import Client, Event
+from agentops.helpers import get_ISO_time
 
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
@@ -237,20 +238,21 @@ class _Multion:
     
     def post(self, url, data, sessionId=None):
 
-        # TODO: Start time
-        from datetime import datetime
-        init_timestamp = datetime.utcfromtimestamp(time.time()).isoformat(timespec='milliseconds') + 'Z' #TODO: get_ISO_time()
+        init_timestamp = get_ISO_time()
 
-        error_messages = ""
+        error_message = ""
 
         if self.token is None and self.api_key is None:
-            # TODO: Set error string
-			# TODO: agentops record action
-		    # TODO: print error string
-
-            raise Exception(
-                "You must log in or provide an API key before making API calls."
-            )
+            error_message = "You must log in or provide an API key before making API calls."
+            self.agentops_client.record(Event(
+                        event_type="multion post (new_session/update_session)",
+                        result='Fail',
+                        returns={"finish_reason": "Fail",
+                                 "content": error_message},
+                        action_type='api',
+                        init_timestamp=init_timestamp
+                    ))
+            raise Exception(error_message)
 
         headers = self.set_headers()
 
@@ -259,7 +261,7 @@ class _Multion:
             try:
                 response = requests.post(url, json=data, headers=headers)
             except requests.exceptions.RequestException as e:
-                error_messages += f"Request failed due to an error: {e}\n"
+                error_message = f"Request failed due to an error: {e}\n"
                 break
 
             if response.ok:  # checks if status_code is 200-400
@@ -267,45 +269,70 @@ class _Multion:
                     response_json = response.json()["response"]["data"]
 
                     self.agentops_client.record(Event(
-                        event_type="multion new_session/update_session",
+                        event_type="multion post (new_session/update_session)",
                         result='Success',
                         returns={"finish_reason": "Success",
                                  "content": response_json},
-                        action_type='api',
+                        action_type='screenshot',
+                        screenshot=response_json["screenshot"],
                         init_timestamp=init_timestamp
                     ))
 
-                    self.agentops_client.end_session("Success")
-
-                    print("should send to agentops")
-
                     return response_json
                 except json.JSONDecodeError:
-                    error_messages += "JSONDecodeError: The server didn't respond with valid JSON.\n"
+                    error_message = "JSONDecodeError: The server didn't respond with valid JSON.\n"
                 break  # if response is valid then exit loop
             elif response.status_code == 401:  # token has expired
-                error_messages += "Invalid token. Refreshing...\n"
+                error_message = "Invalid token. Refreshing...\n"
                 self.refresh_token()  # Refresh the token
                 headers["Authorization"] = f"Bearer {self.token['access_token']}"
             elif response.status_code == 404:  # server not connected
-                error_messages += "Server Disconnected. Please press connect in the Multion extension popup\n"
+                error_message = "Server Disconnected. Please press connect in the Multion extension popup\n"
             else:
-                error_messages += f"Request failed with status code: {response.status_code}\n"
-                error_messages += f"Response text: {response.text}\n"
+                error_message = f"Request failed with status code: {response.status_code}\n\
+                                Response text: {response.text}\n"
 
             time.sleep(1)  # you may want to increase this value depending on the API
             attempts += 1
 
-            if error_messages:
-                print(error_messages)
+            if error_message:
+                print(error_message)
+                self.agentops_client.record(Event(
+                        event_type="multion post (new_session/update_session)",
+                        result='Fail',
+                        returns={"finish_reason": "Fail",
+                                 "content": error_message},
+                        action_type='api',
+                        init_timestamp=init_timestamp
+                    ))
 
         if attempts == 5:
-            error_messages += f"Request failed with status code: {response.status_code}\n"
-            error_messages += f"Response text: {response.text}\n"
-            raise Exception("Failed to get a valid response after 5 attempts") # TODO: Catch with agentops in calling function?
+            error_message = f"Request failed with status code: {response.status_code}\n\
+                            Response text: {response.text}\n"
 
-        if error_messages:
-            print(error_messages)
+            print(error_message)
+            self.agentops_client.record(Event(
+                    event_type="multion post (new_session/update_session)",
+                    result='Fail',
+                    returns={"finish_reason": "Fail",
+                                "content": error_message},
+                    action_type='api',
+                    init_timestamp=init_timestamp
+                ))
+            
+
+            error_message = "Failed to get a valid response after 5 attempts"
+            
+            self.agentops_client.record(Event(
+                    event_type="multion post (new_session/update_session)",
+                    result='Fail',
+                    returns={"finish_reason": "Fail",
+                                "content": error_message},
+                    action_type='api',
+                    init_timestamp=init_timestamp
+                ))
+
+            raise Exception(error_message) # TODO: Catch with agentops in calling function instead?
         
     def get(self):
         if self.token is None and self.api_key is None:
@@ -444,15 +471,7 @@ class _Multion:
         if height is not None and width is not None:
             new_dimensions = (width, height)  # width, height
             img = img.resize(new_dimensions, Image.LANCZOS)
-            
-        print("sending screenshot to agentops")
-        self.agentops_client.record(Event(
-                    event_type = "screenshot",
-                    result="Success",
-                    action_type="api",
-                    screenshot=img,
-                ))
-        
+         
         # Return the image
         return img
 
@@ -492,6 +511,8 @@ class _Multion:
             print("Failed set remote")
 
     def get_video(self, session_id: str):
+        init_timestamp=get_ISO_time()
+
         if self.is_remote:
             response = requests.get(
                 f"{self.api_url}/sessionVideo/{session_id}", stream=True
@@ -502,6 +523,10 @@ class _Multion:
                     for chunk in response.iter_content(chunk_size=1024):
                         if chunk:
                             f.write(chunk)
+                   
+                print("sending video to agentops")
+                self.agentops_client.add_video_recording(f"{self.api_url}/sessionVideo/{session_id}")
+
                 # Display the video using IPython display
                 return Video("video.webm")
             else:
