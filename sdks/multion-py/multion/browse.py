@@ -6,6 +6,7 @@ from typing import Optional
 import multion
 import pytesseract
 from PIL import Image
+import requests
 
 
 class MultionToolSpec:
@@ -86,6 +87,7 @@ class MultionToolSpec:
         #             continue;
         #         case 'WRONG':
         #     }
+        print(session)
         return {
             "status": session["status"],
             "url": session["url"],
@@ -99,8 +101,17 @@ class MultionToolSpec:
         self.current_url = session["url"]
 
     def _read_screenshot(self, screenshot) -> str:
-        image_bytes = screenshot.replace("data:image/png;base64,", "")
-        image = Image.open(self._bytes_to_image(image_bytes))
+        if screenshot.startswith("http://") or screenshot.startswith("https://"):
+            response = requests.get(screenshot)
+            if response.status_code != 200:
+                print(f"Failed to retrieve image from {screenshot}")
+                return None
+            img_bytes = response.content
+            img_io = BytesIO(img_bytes)
+        else:
+            img_bytes = screenshot.replace("data:image/png;base64,", "")
+            img_io = self._bytes_to_image(img_bytes)
+        image = Image.open(img_io)
 
         return pytesseract.image_to_string(image)
 

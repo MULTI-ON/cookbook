@@ -375,7 +375,6 @@ class _Multion:
 
         # Create a BytesIO object and read the image bytes
         img_io = BytesIO(img_bytes)
-
         # Convert BytesIO into Image
         img = Image.open(img_io)
 
