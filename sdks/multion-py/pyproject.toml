@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "multion"
-version = "0.2.23"
+version = "0.2.24"
 description = "MULTION API"
 authors = ["Div Garg"]
 include = ["multion/*"]
