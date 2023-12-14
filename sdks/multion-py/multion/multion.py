@@ -512,10 +512,11 @@ class _Multion:
 
     def get_video(self, session_id: str):
         init_timestamp=get_ISO_time()
+        video_url = f"{self.api_url}/sessionVideo/{session_id}"
 
         if self.is_remote:
             response = requests.get(
-                f"{self.api_url}/sessionVideo/{session_id}", stream=True
+                video_url, stream=True
             )
             if response.status_code == 200:
                 # Save the video stream to a file
@@ -524,8 +525,7 @@ class _Multion:
                         if chunk:
                             f.write(chunk)
                    
-                print("sending video to agentops")
-                self.agentops_client.add_video_recording(f"{self.api_url}/sessionVideo/{session_id}")
+                self.agentops_client.end_session(end_state="Success", video=video_url)
 
                 # Display the video using IPython display
                 return Video("video.webm")
