@@ -375,10 +375,6 @@ class _Multion:
 
         # Create a BytesIO object and read the image bytes
         img_io = BytesIO(img_bytes)
-<<<<<<< HEAD
-=======
-
->>>>>>> cb0885f (update syntax)
         # Convert BytesIO into Image
         img = Image.open(img_io)
 
@@ -478,14 +474,11 @@ def api_key(value):
     global _multion_instance
     _multion_instance.api_key = value
 
-<<<<<<< HEAD
 @api_key.setter
 def api_key(value):
     global _multion_instance
     _multion_instance.api_key = value
 
-=======
->>>>>>> cb0885f (update syntax)
 
 # Expose the login and post methods at the module level
 def login(use_api=False, multion_api_key=None):
