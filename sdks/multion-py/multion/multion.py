@@ -474,11 +474,6 @@ def api_key(value):
     global _multion_instance
     _multion_instance.api_key = value
 
-@api_key.setter
-def api_key(value):
-    global _multion_instance
-    _multion_instance.api_key = value
-
 
 # Expose the login and post methods at the module level
 def login(use_api=False, multion_api_key=None):
