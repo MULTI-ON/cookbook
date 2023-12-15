@@ -16,6 +16,7 @@ ipython = "^8.1.0"
 cognitojwt = "^1.4.1"
 pillow = "^10.0.1"
 pytesseract = "^0.3.10"
+agentops = "^0.0.9"
 
 
 [build-system]
