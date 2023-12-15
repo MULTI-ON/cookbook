@@ -135,9 +135,8 @@ class _Multion:
                 return
 
         
-		# WIP INTEGRATION OF AGENTOPS
         self.agentops_client = Client(api_key=self.agentops_api_key,
-                   tags=['multion-howie'])
+                   tags=['multion'])
         
         valid_token = self.verify_user()
         if valid_token:
