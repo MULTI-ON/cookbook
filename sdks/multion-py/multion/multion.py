@@ -120,11 +120,6 @@ class _Multion:
         elif self.api_key is None:
             self.api_key = os.getenv("MULTION_API_KEY")
 
-        if agentops_api_key:
-            self.agentops_api_key = agentops_api_key
-        elif self.agentops_api_key is None:
-            self.agentops_api_key = os.getenv("AGENTOPS_API_KEY")
-
         if use_api:
             valid_api_key = self.verify_user(use_api)
             if valid_api_key:
@@ -133,10 +128,6 @@ class _Multion:
             else:
                 self.issue_api_key()
                 return
-
-        
-        self.agentops_client = Client(api_key=self.agentops_api_key,
-                   tags=['multion'])
         
         valid_token = self.verify_user()
         if valid_token:
@@ -326,9 +317,25 @@ class _Multion:
         response = requests.get(url, headers=headers)
         return response.json()
 
-    def new_session(self, data):
+    def new_session(self, data, agentops_api_key=None):
         url = f"{self.api_url}/sessions"
         print("running new session")
+
+        if agentops_api_key:
+            self.agentops_api_key = agentops_api_key
+        elif self.agentops_api_key is None:
+            self.agentops_api_key = os.getenv("AGENTOPS_API_KEY")
+
+        self.agentops_client = Client(api_key=self.agentops_api_key,
+                   tags=['multion'])
+
+        post = self.post(url, data)
+
+        print(post)
+
+        if self.agentops_client:
+            self.agentops_client.set_session_video(f"{self.api_url}/sessionVideo/{post.data['session_id']}")
+
         return self.post(url, data)
 
     def update_session(self, sessionId, data):
@@ -341,6 +348,9 @@ class _Multion:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
             )
+        
+        if self.agentops_client:
+            self.agentops_client.end_session(end_state="Success")
 
         headers = self.set_headers()
         url = f"{self.api_url}/session/{sessionId}"
@@ -357,9 +367,17 @@ class _Multion:
     def close_sessions(self):
         if self.token is None and self.api_key is None:
             raise Exception("You must log in before closing a session.")
-
+        
         url = f"{self.api_url}/sessions"
         response = requests.delete(url)
+
+        if self.agentops_client:
+            active_sessions = self.list_sessions()
+
+            if "session_ids" in active_sessions:
+                for session_id in active_sessions["session_ids"]:
+                    self.agentops_client.end_session(session_id=session_id, end_state="Success")
+
         if response.ok:  # checks if status_code is 200-400
             try:
                 return response.json()["response"]
@@ -503,8 +521,6 @@ class _Multion:
                     for chunk in response.iter_content(chunk_size=1024):
                         if chunk:
                             f.write(chunk)
-                   
-                self.agentops_client.end_session(end_state="Success", video=video_url)
 
                 # Display the video using IPython display
                 return Video("video.webm")
@@ -537,8 +553,8 @@ def api_key(value):
 
 
 # Expose the login and post methods at the module level
-def login(use_api=False, multion_api_key=None, agentops_api_key=None):
-    _multion_instance.login(use_api, multion_api_key, agentops_api_key)
+def login(use_api=False, multion_api_key=None):
+    _multion_instance.login(use_api, multion_api_key)
 
 
 def post(url, data):
@@ -548,8 +564,8 @@ def post(url, data):
 def get():
     return _multion_instance.get()
 
-def new_session(data):
-    return _multion_instance.new_session(data)
+def new_session(data, agentops_api_key=None):
+    return _multion_instance.new_session(data, agentops_api_key)
 
 
 def update_session(sessionId, data):
