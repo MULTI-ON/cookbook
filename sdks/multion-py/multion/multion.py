@@ -44,15 +44,6 @@ class _Multion:
         # Allow setting the API key manually
         self._api_key = value
     
-    @property
-    def agentops_api_key(self):
-        # Get the AgentOps API key from the instance variable or the environment variable
-        return self._agentops_api_key if self._agentops_api_key else os.getenv("AGENTOPS_API_KEY")
-    
-    @agentops_api_key.setter
-    def agentops_api_key(self, value):
-        # Allow setting the AgentOps API key manually
-        self._agentops_api_key = value
 
     def load_secrets(self, secrets_file):
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
@@ -507,12 +498,9 @@ class _Multion:
             print("Failed set remote")
 
     def get_video(self, session_id: str):
-        init_timestamp=get_ISO_time()
-        video_url = f"{self.api_url}/sessionVideo/{session_id}"
-
         if self.is_remote:
             response = requests.get(
-                video_url, stream=True
+                f"{self.api_url}/sessionVideo/{session_id}", stream=True
             )
             if response.status_code == 200:
                 # Save the video stream to a file
@@ -520,7 +508,6 @@ class _Multion:
                     for chunk in response.iter_content(chunk_size=1024):
                         if chunk:
                             f.write(chunk)
-
                 # Display the video using IPython display
                 return Video("video.webm")
             else:
