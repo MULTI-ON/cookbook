@@ -44,6 +44,15 @@ class _Multion:
         # Allow setting the API key manually
         self._api_key = value
     
+    @property
+    def agentops_api_key(self):
+        # Get the AgentOps API key from the instance variable or the environment variable
+        return self._agentops_api_key if self._agentops_api_key else os.getenv("AGENTOPS_API_KEY")
+    
+    @agentops_api_key.setter
+    def agentops_api_key(self, value):
+        # Allow setting the AgentOps API key manually
+        self._agentops_api_key = value
 
     def load_secrets(self, secrets_file):
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
@@ -458,7 +467,6 @@ class _Multion:
         if height is not None and width is not None:
             new_dimensions = (width, height)  # width, height
             img = img.resize(new_dimensions, Image.LANCZOS)
-         
         # Return the image
         return img
 
