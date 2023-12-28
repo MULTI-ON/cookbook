@@ -100,6 +100,12 @@ class _Multion:
             return False
 
     def login(self, use_api=False, multion_api_key=None):
+        """
+        Log in to the Multion service using an API key or by obtaining a new token.
+
+        :param use_api: A boolean indicating whether to use the API key for login.
+        :param multion_api_key: An optional API key to use for login.
+        """
         if multion_api_key:
             self.api_key = multion_api_key
         elif self.api_key is None:

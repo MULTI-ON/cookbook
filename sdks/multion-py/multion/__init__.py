@@ -4,6 +4,7 @@ from .multion import (
     post,
     get,
     new_session,
+    create_session,
     update_session,
     list_sessions,
     close_session,
