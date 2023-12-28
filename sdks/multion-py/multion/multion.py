@@ -211,7 +211,7 @@ class _Multion:
             headers["Authorization"] = f"Bearer {self.token['access_token']}"
         return headers
 
-    def post(self, url, data, sessionId=None):
+    def post(self, url, data):
         if self.token is None and self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
@@ -219,8 +219,9 @@ class _Multion:
 
         headers = self.set_headers()
 
+        MAX_ATTEMPTS = 3
         attempts = 0
-        while attempts < 5:  # tries up to 5 times
+        while attempts < MAX_ATTEMPTS:  # tries up to 3 times
             try:
                 response = requests.post(url, json=data, headers=headers)
             except requests.exceptions.RequestException as e:
@@ -254,7 +255,7 @@ class _Multion:
             attempts += 1
 
         # If we've exhausted all attempts and not returned, raise an error
-        if attempts == 5:
+        if attempts == MAX_ATTEMPTS:
             print(f"Request failed with status code: {response.status_code}")
             print(f"Response text: {response.text}")
             raise Exception("Failed to get a valid response after 5 attempts")
@@ -266,30 +267,18 @@ class _Multion:
             )
 
         headers = self.set_headers()
-
         url = f"{self.api_url}/sessions"
-
         response = requests.get(url, headers=headers)
         return response.json()
 
-    def new_session(self, data):
-        url = f"{self.api_url}/sessions"
-        print("running new session")
-        return self.post(url, data)
-
-    def update_session(self, sessionId, data):
-        url = f"{self.api_url}/session/{sessionId}"
-        print("session updated")
-        return self.post(url, data)
-
-    def close_session(self, sessionId):
+    def delete(self, session_id):
         if self.token is None and self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
             )
 
         headers = self.set_headers()
-        url = f"{self.api_url}/session/{sessionId}"
+        url = f"{self.api_url}/session/{session_id}"
         response = requests.delete(url, headers=headers)
 
         if response.ok:  # checks if status_code is 200-400
@@ -300,19 +289,33 @@ class _Multion:
         else:
             print(f"Failed to close session. Status code: {response.status_code}")
 
-    def close_sessions(self):
-        if self.token is None and self.api_key is None:
-            raise Exception("You must log in before closing a session.")
-
+    def new_session(self, data):
+        print(
+            "WARNING: 'new_session' is deprecated and will be removed in a future version. Use 'create_session' instead."
+        )
         url = f"{self.api_url}/sessions"
-        response = requests.delete(url)
-        if response.ok:  # checks if status_code is 200-400
-            try:
-                return response.json()["response"]
-            except Exception as e:
-                print(f"ERROR: {e}")
-        else:
-            print(f"Failed to close session. Status code: {response.status_code}")
+        # print("running new session")
+        return self.post(url, data)
+
+    def create_session(self, data):
+        url = f"{self.api_url}/session"
+        # print("running create session")
+        return self.post(url, data)
+
+    def update_session(self, sessionId, data):
+        url = f"{self.api_url}/session/{sessionId}"
+        # print("session updated")
+        return self.post(url, data)
+
+    def close_session(self, sessionId):
+        url = f"{self.api_url}/session/{sessionId}"
+        # print("session closed")
+        return self.delete(url)
+
+    def close_sessions(self):
+        url = f"{self.api_url}/sessions"
+        # print("all sessions closed")
+        return self.delete(url)
 
     def list_sessions(self):
         return self.get()
@@ -494,6 +497,10 @@ def new_session(data):
 
 def update_session(sessionId, data):
     return _multion_instance.update_session(sessionId, data)
+
+
+def create_session(data):
+    return _multion_instance.create_session(data)
 
 
 def close_session(sessionId):
