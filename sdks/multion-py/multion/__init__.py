@@ -6,6 +6,7 @@ from .multion import (
     new_session,
     create_session,
     update_session,
+    step_session,
     list_sessions,
     close_session,
     close_sessions,

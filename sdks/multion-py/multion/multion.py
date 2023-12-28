@@ -277,19 +277,18 @@ class _Multion:
         response = requests.get(url, headers=headers)
         return response.json()
 
-    def delete(self, session_id):
+    def delete(self, url):
         if self.token is None and self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
             )
 
         headers = self.set_headers()
-        url = f"{self.api_url}/session/{session_id}"
         response = requests.delete(url, headers=headers)
 
         if response.ok:  # checks if status_code is 200-400
             try:
-                return response.json()["response"]
+                return response.json()["response"]["data"]
             except Exception as e:
                 print(f"ERROR: {e}")
         else:
@@ -309,8 +308,16 @@ class _Multion:
         return self.post(url, data)
 
     def update_session(self, sessionId, data):
+        print(
+            "WARNING: 'update_session' is deprecated and will be removed in a future version. Use 'step_session' instead."
+        )
         url = f"{self.api_url}/session/{sessionId}"
         # print("session updated")
+        return self.post(url, data)
+
+    def step_session(self, sessionId, data):
+        url = f"{self.api_url}/session/{sessionId}"
+        # print("session stepped")
         return self.post(url, data)
 
     def close_session(self, sessionId):
@@ -497,20 +504,24 @@ def get():
     return _multion_instance.get()
 
 
-def new_session(data):
-    return _multion_instance.new_session(data)
+def new_session(*args, **kwargs):
+    return _multion_instance.new_session(*args, **kwargs)
 
 
-def update_session(sessionId, data):
-    return _multion_instance.update_session(sessionId, data)
+def update_session(sessionId, *args, **kwargs):
+    return _multion_instance.update_session(sessionId, *args, **kwargs)
 
 
-def create_session(data):
-    return _multion_instance.create_session(data)
+def create_session(*args, **kwargs):
+    return _multion_instance.create_session(*args, **kwargs)
 
 
-def close_session(sessionId):
-    return _multion_instance.close_session(sessionId)
+def step_session(sessionId, *args, **kwargs):
+    return _multion_instance.step_session(sessionId, *args, **kwargs)
+
+
+def close_session(sessionId, *args, **kwargs):
+    return _multion_instance.close_session(sessionId, *args, **kwargs)
 
 
 def close_sessions():
