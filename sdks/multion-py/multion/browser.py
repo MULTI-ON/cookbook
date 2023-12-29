@@ -1,11 +1,12 @@
 """Multion tool spec."""
 
-import base64
+from deprecated import deprecated
 from io import BytesIO
+from PIL import Image
 from typing import Optional
+import base64
 import multion
 import pytesseract
-from PIL import Image
 import requests
 
 
@@ -22,6 +23,7 @@ class MultionToolSpec:
         use_api: Optional[bool] = False,
     ) -> None:
         """Initialize with parameters."""
+
         multion.login(use_api=use_api)
 
         self.current_status = "NOT_ACTIVE"
@@ -29,7 +31,41 @@ class MultionToolSpec:
         self.current_url = default_url
         self.mode = mode
 
-    def browse(self, instruction: str, url: str):
+    def browse(
+        self,
+        instruction: str,
+        url: Optional[str] = None,
+        max_iterations: int = 10,
+        stream: bool = False,
+        model_args: dict = {},
+    ):
+        """
+        Browse the web using MultiOn by calling the high-level browse API endpoint.
+
+        args:
+            instruction (str): The detailed and specific natural language instruction for web browsing.
+            url (str, optional): The best URL to start the session based on user instruction.
+            max_iterations (int, optional): Maximum number of iterations to attempt.
+            stream (bool, optional): Stream the browsing session.
+            model_args (dict, optional): Additional arguments for the model.
+
+        returns:
+            dict: The result of the browse operation including status, lastUrl, pageContent, and screenshot.
+        """
+
+        response = multion.browse(
+            {
+                "instruction": instruction,
+                "url": url if url else self.current_url,
+                "maxIterations": max_iterations,
+                "stream": stream,
+                "modelArgs": model_args,
+            }
+        )
+        return response
+
+    @deprecated
+    def browse_old(self, instruction: str, url: str):
         """
         Browse the web using MultiOn
         MultiOn gives the ability for LLMs to control web browsers using natural language instructions
@@ -44,23 +80,16 @@ class MultionToolSpec:
         """
         # multion.set_remote(False)
 
-        # If a session exists, update it. Otherwise, create a new session.
-        if self.session_id:
-            session = multion.update_session(
-                self.session_id, {"input": instruction, "url": self.current_url}
-            )
-
-        else:
-            session = multion.new_session(
-                {"input": instruction, "url": url if url else self.current_url}
-            )
+        # If a session does not exist, create a new session.
+        if not self.session_id:
+            session = multion.create_session({"url": url if url else self.current_url})
             self.session_id = session["session_id"]
 
         # Update the current status and URL based on the session
         self._update_status(session)
 
         while self.mode == "auto" and (self.current_status == "CONTINUE"):
-            session = multion.update_session(
+            session = multion.step_session(
                 self.session_id, {"input": instruction, "url": self.current_url}
             )
             self._update_status(session)

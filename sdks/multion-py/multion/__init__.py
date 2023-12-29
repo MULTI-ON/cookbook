@@ -3,6 +3,7 @@ from .multion import (
     login,
     post,
     get,
+    browse,
     new_session,
     create_session,
     update_session,
@@ -21,7 +22,7 @@ from .multion import (
     api_key,
 )
 
-from .browse import MultionToolSpec
+from .browser import MultionToolSpec
 
 from importlib import metadata
 
