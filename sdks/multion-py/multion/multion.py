@@ -40,7 +40,8 @@ class _Multion:
     def api_key(self, value):
         # Allow setting the API key manually and in the environment variable
         self._api_key = value
-        os.environ["MULTION_API_KEY"] = value
+        if value:
+            os.environ["MULTION_API_KEY"] = value
 
     def load_secrets(self, secrets_file):
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
