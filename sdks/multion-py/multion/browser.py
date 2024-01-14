@@ -35,7 +35,7 @@ class MultionToolSpec:
         self,
         instruction: str,
         url: Optional[str] = None,
-        max_iterations: Optional[int] = 10,
+        max_steps: Optional[int] = 10,
         stream: Optional[bool] = False,
         model_args: Optional[dict] = {},
     ):
@@ -45,7 +45,7 @@ class MultionToolSpec:
         args:
             instruction (str): The detailed and specific natural language instruction for web browsing.
             url (str, optional): The best URL to start the session based on user instruction.
-            max_iterations (int, optional): Maximum number of iterations to attempt.
+            max_steps (int, optional): Maximum number of steps to attempt.
             stream (bool, optional): Stream the browsing session.
             model_args (dict, optional): Additional arguments for the model.
 
@@ -57,7 +57,7 @@ class MultionToolSpec:
             {
                 "instruction": instruction,
                 "url": url if url else self.current_url,
-                "maxIterations": max_iterations,
+                "maxSteps": max_steps,
                 "stream": stream,
                 "modelArgs": model_args,
             }

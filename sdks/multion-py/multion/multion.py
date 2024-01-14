@@ -568,7 +568,7 @@ def browse(data):
 
             - cmd (str): A detailed and specific natural language instruction for guiding the web browsing experience.
             - url (str, optional): The initial URL to start the browsing session, defaults to the current URL if not provided.
-            - maxIterations (int, optional): The maximum number of iterations the browsing operation should attempt, defaults to a predefined value if not specified.
+            - maxSteps (int, optional): The maximum number of steps the browsing operation should attempt, defaults to a predefined value `20` if not specified.
             - stream (bool, optional): A flag indicating whether to stream the browsing session, enabling real-time updates.
             - modelArgs (dict, optional): A dictionary containing additional arguments for the model that will be used during the browsing session.
 
