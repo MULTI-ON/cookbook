@@ -24,7 +24,7 @@ class MultionToolSpec:
     ) -> None:
         """Initialize with parameters."""
 
-        multion.login(use_api=use_api)
+        # multion.login(use_api=use_api)
 
         self.current_status = "NOT_ACTIVE"
         self.session_id = None
@@ -35,9 +35,9 @@ class MultionToolSpec:
         self,
         instruction: str,
         url: Optional[str] = None,
-        max_iterations: int = 10,
-        stream: bool = False,
-        model_args: dict = {},
+        max_iterations: Optional[int] = 10,
+        stream: Optional[bool] = False,
+        model_args: Optional[dict] = {},
     ):
         """
         Browse the web using MultiOn by calling the high-level browse API endpoint.
@@ -65,6 +65,22 @@ class MultionToolSpec:
         return response
 
     @deprecated
+    def browse_tool(self, instruction: str, url: str):
+        """
+        Browse the web using MultiOn
+        MultiOn gives the ability for LLMs to control web browsers using natural language instructions
+        Always include an URL to start browsing from (default to https://www.google.com/search?q=<search_query> if no better option, where <search_query> is a generated query to Google.)
+
+        You may have to repeat the instruction through multiple steps or update your instruction to get to
+        the final desired state. If the status is 'CONTINUE', then reissue the same instruction to continue execution
+
+        args:
+            instruction (str): The detailed and specific natural language instruction for web browsing
+            url (str): The best URL to start the session based on user instruction
+        """
+        return self.browse(instruction, url)
+
+    @deprecated
     def browse_old(self, instruction: str, url: str):
         """
         Browse the web using MultiOn
@@ -78,7 +94,6 @@ class MultionToolSpec:
             instruction (str): The detailed and specific natural language instruction for web browsing
             url (str): The best URL to start the session based on user instruction
         """
-        # multion.set_remote(False)
 
         # If a session does not exist, create a new session.
         if not self.session_id:
