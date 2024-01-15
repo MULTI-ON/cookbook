@@ -165,7 +165,7 @@ class _Multion:
         The API key is then stored in the instance for future use.
         """
         # Get the authorization URL
-        app_url = "https://app.multion.ai/api-tokens"
+        app_url = "https://app.multion.ai/api-keys"
         print("Please visit this URL to generate an API Key: " + app_url)
 
         try:
