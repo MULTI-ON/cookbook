@@ -20,7 +20,7 @@ class _Multion:
         self.token = None
         self.client_id = self.register_client()
         self.token_file = token_file
-        self.api_url = "https://api.multion.ai"
+        self.api_url = "https://api.multion.ai/api/v1"
 
         self._api_key = os.getenv("MULTION_API_KEY")  # Add this line
 
