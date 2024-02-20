@@ -1,11 +1,13 @@
 """Multion tool spec."""
 
-import base64
+from deprecated import deprecated
 from io import BytesIO
+from PIL import Image
 from typing import Optional
+import base64
 import multion
 import pytesseract
-from PIL import Image
+import requests
 
 
 class MultionToolSpec:
@@ -21,14 +23,49 @@ class MultionToolSpec:
         use_api: Optional[bool] = False,
     ) -> None:
         """Initialize with parameters."""
-        multion.login(use_api=use_api)
+
+        # multion.login(use_api=use_api)
 
         self.current_status = "NOT_ACTIVE"
         self.session_id = None
         self.current_url = default_url
         self.mode = mode
 
-    def browse(self, instruction: str, url: str):
+    def browse(
+        self,
+        instruction: str,
+        url: Optional[str] = None,
+        max_steps: Optional[int] = 10,
+        stream: Optional[bool] = False,
+        model_args: Optional[dict] = {},
+    ):
+        """
+        Browse the web using MultiOn by calling the high-level browse API endpoint.
+
+        args:
+            instruction (str): The detailed and specific natural language instruction for web browsing.
+            url (str, optional): The best URL to start the session based on user instruction.
+            max_steps (int, optional): Maximum number of steps to attempt.
+            stream (bool, optional): Stream the browsing session.
+            model_args (dict, optional): Additional arguments for the model.
+
+        returns:
+            dict: The result of the browse operation including status, lastUrl, pageContent, and screenshot.
+        """
+
+        response = multion.browse(
+            {
+                "instruction": instruction,
+                "url": url if url else self.current_url,
+                "maxSteps": max_steps,
+                "stream": stream,
+                "modelArgs": model_args,
+            }
+        )
+        return response
+
+    @deprecated
+    def browse_tool(self, instruction: str, url: str):
         """
         Browse the web using MultiOn
         MultiOn gives the ability for LLMs to control web browsers using natural language instructions
@@ -41,25 +78,33 @@ class MultionToolSpec:
             instruction (str): The detailed and specific natural language instruction for web browsing
             url (str): The best URL to start the session based on user instruction
         """
-        # multion.set_remote(False)
+        return self.browse(instruction, url)
 
-        # If a session exists, update it. Otherwise, create a new session.
-        if self.session_id:
-            session = multion.update_session(
-                self.session_id, {"input": instruction, "url": self.current_url}
-            )
+    @deprecated
+    def browse_old(self, instruction: str, url: str):
+        """
+        Browse the web using MultiOn
+        MultiOn gives the ability for LLMs to control web browsers using natural language instructions
+        Always include an URL to start browsing from (default to https://www.google.com/search?q=<search_query> if no better option, where <search_query> is a generated query to Google.)
 
-        else:
-            session = multion.new_session(
-                {"input": instruction, "url": url if url else self.current_url}
-            )
+        You may have to repeat the instruction through multiple steps or update your instruction to get to
+        the final desired state. If the status is 'CONTINUE', then reissue the same instruction to continue execution
+
+        args:
+            instruction (str): The detailed and specific natural language instruction for web browsing
+            url (str): The best URL to start the session based on user instruction
+        """
+
+        # If a session does not exist, create a new session.
+        if not self.session_id:
+            session = multion.create_session({"url": url if url else self.current_url})
             self.session_id = session["session_id"]
 
         # Update the current status and URL based on the session
         self._update_status(session)
 
         while self.mode == "auto" and (self.current_status == "CONTINUE"):
-            session = multion.update_session(
+            session = multion.step_session(
                 self.session_id, {"input": instruction, "url": self.current_url}
             )
             self._update_status(session)
@@ -86,6 +131,7 @@ class MultionToolSpec:
         #             continue;
         #         case 'WRONG':
         #     }
+        print(session)
         return {
             "status": session["status"],
             "url": session["url"],
@@ -99,8 +145,17 @@ class MultionToolSpec:
         self.current_url = session["url"]
 
     def _read_screenshot(self, screenshot) -> str:
-        image_bytes = screenshot.replace("data:image/png;base64,", "")
-        image = Image.open(self._bytes_to_image(image_bytes))
+        if screenshot.startswith("http://") or screenshot.startswith("https://"):
+            response = requests.get(screenshot)
+            if response.status_code != 200:
+                print(f"Failed to retrieve image from {screenshot}")
+                return None
+            img_bytes = response.content
+            img_io = BytesIO(img_bytes)
+        else:
+            img_bytes = screenshot.replace("data:image/png;base64,", "")
+            img_io = self._bytes_to_image(img_bytes)
+        image = Image.open(img_io)
 
         return pytesseract.image_to_string(image)
 

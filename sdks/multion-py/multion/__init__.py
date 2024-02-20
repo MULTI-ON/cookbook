@@ -3,8 +3,11 @@ from .multion import (
     login,
     post,
     get,
+    browse,
     new_session,
+    create_session,
     update_session,
+    step_session,
     list_sessions,
     close_session,
     close_sessions,
@@ -16,10 +19,10 @@ from .multion import (
     set_remote,
     get_remote,
     set_api_url,
-    api_key
+    api_key,
 )
 
-from .browse import MultionToolSpec
+from .browser import MultionToolSpec
 
 from importlib import metadata
 

@@ -3,6 +3,7 @@ import os
 import webbrowser
 import requests
 from cryptography.fernet import Fernet
+from deprecated import deprecated
 
 # from requests_oauthlib import OAuth2Session
 import json
@@ -20,7 +21,7 @@ class _Multion:
         self.token = None
         self.client_id = self.register_client()
         self.token_file = token_file
-        self.api_url = "https://api.multion.ai"
+        self.api_url = "https://api.multion.ai/public/api/v1"
 
         self._api_key = os.getenv("MULTION_API_KEY")  # Add this line
         self._agentops_api_key = os.getenv("AGENTOPS_API_KEY")
@@ -41,8 +42,10 @@ class _Multion:
 
     @api_key.setter
     def api_key(self, value):
-        # Allow setting the API key manually
+        # Allow setting the API key manually and in the environment variable
         self._api_key = value
+        if value:
+            os.environ["MULTION_API_KEY"] = value
     
     @property
     def agentops_api_key(self):
@@ -89,6 +92,12 @@ class _Multion:
         self.is_remote = False
 
     def verify_user(self, use_api=False):
+        """
+        Verify the user by checking the validity of the API key or token.
+
+        :param use_api: A boolean indicating whether to use the API key for verification.
+        :return: True if the user is verified, False otherwise.
+        """
         headers = {}
         if use_api:
             if self.api_key is not None:
@@ -115,6 +124,12 @@ class _Multion:
 
     def login(self, use_api=False, multion_api_key=None, agentops_api_key=None):      
    
+        """
+        Log in to the Multion service using an API key or by obtaining a new token.
+
+        :param use_api: A boolean indicating whether to use the API key for login.
+        :param multion_api_key: An optional API key to use for login.
+        """
         if multion_api_key:
             self.api_key = multion_api_key
         elif self.api_key is None:
@@ -160,8 +175,12 @@ class _Multion:
             time.sleep(1)  # Wait before the next poll
 
     def issue_api_key(self):
+        """
+        Directs the user to the URL where they can generate an API key, and prompts them to enter it.
+        The API key is then stored in the instance for future use.
+        """
         # Get the authorization URL
-        app_url = "https://app.multion.ai/api-tokens"
+        app_url = "https://app.multion.ai/api-keys"
         print("Please visit this URL to generate an API Key: " + app_url)
 
         try:
@@ -175,6 +194,15 @@ class _Multion:
         self.api_key = input("Please enter your API Key: ")
 
     def register_client(self):
+        """
+        Generates a unique client identifier based on the MAC address of the device.
+
+        This identifier is used to register the client with the backend service.
+        The MAC address is converted to a UUID which is then returned.
+
+        Returns:
+            UUID: A unique identifier for the client device.
+        """
         # Get the MAC address and use it to generate a UUID
         mac_num = uuid.getnode()
         mac = ":".join(("%012X" % mac_num)[i : i + 2] for i in range(0, 12, 2))
@@ -226,7 +254,7 @@ class _Multion:
             headers["Authorization"] = f"Bearer {self.token['access_token']}"
         return headers
     
-    def post(self, url, data, sessionId=None):
+    def post(self, url, data):
 
         init_timestamp = get_ISO_time()
         error_message = ""
@@ -245,8 +273,9 @@ class _Multion:
 
         headers = self.set_headers()
 
+        MAX_ATTEMPTS = 3
         attempts = 0
-        while attempts < 5:  # tries up to 5 times
+        while attempts < MAX_ATTEMPTS:  # tries up to 3 times
             try:
                 response = requests.post(url, json=data, headers=headers)
             except requests.exceptions.RequestException as e:
@@ -287,7 +316,7 @@ class _Multion:
             time.sleep(1)  # you may want to increase this value depending on the API
             attempts += 1
 
-        if attempts == 5:
+        if attempts == MAX_ATTEMPTS:
             print(f"Request failed with status code: {response.status_code}")
             print(f"Response text: {response.text}")
 
@@ -311,38 +340,11 @@ class _Multion:
             )
 
         headers = self.set_headers()
-
         url = f"{self.api_url}/sessions"
-
         response = requests.get(url, headers=headers)
         return response.json()
 
-    def new_session(self, data, agentops_api_key=None):
-        url = f"{self.api_url}/sessions"
-        print("running new session")
-
-        if agentops_api_key:
-            self.agentops_api_key = agentops_api_key
-        elif self.agentops_api_key is None:
-            self.agentops_api_key = os.getenv("AGENTOPS_API_KEY")
-
-        self.agentops_client = Client(api_key=self.agentops_api_key,
-                                      tags=['multion'],
-                                      org_key='aec7a7c3-b314-4bb0-bf29-eff1d76e3d11',)
-
-        post_response = self.post(url, data)
-
-        if self.agentops_client:
-            self.agentops_client.session.set_session_video(f"{self.api_url}/sessionVideo/{post_response['session_id']}")
-
-        return post_response
-
-    def update_session(self, sessionId, data):
-        url = f"{self.api_url}/session/{sessionId}"
-        print("session updated")
-        return self.post(url, data)
-
-    def close_session(self, sessionId):
+    def delete(self, url):
         if self.token is None and self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
@@ -352,38 +354,84 @@ class _Multion:
             self.agentops_client.end_session(end_state="Success")
 
         headers = self.set_headers()
-        url = f"{self.api_url}/session/{sessionId}"
         response = requests.delete(url, headers=headers)
-
         if response.ok:  # checks if status_code is 200-400
             try:
-                return response.json()["response"]
+                return response.json()["response"]["data"]
             except Exception as e:
                 print(f"ERROR: {e}")
         else:
             print(f"Failed to close session. Status code: {response.status_code}")
+
+    def browse(self, data):
+        if self.token is None and self.api_key is None:
+            raise Exception(
+                "You must log in or provide an API key before making API calls."
+            )
+
+        headers = self.set_headers()
+        url = f"{self.api_url}/browse"
+
+        try:
+            response = requests.post(url, json=data, headers=headers)
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed due to an error: {e}")
+
+        if response.ok:  # checks if status_code is 200-400
+            try:
+                return response.json()
+            except json.JSONDecodeError:
+                print("JSONDecodeError: The server didn't respond with valid JSON.")
+
+        elif response.status_code == 401:  # token has expired
+            print("Invalid token. Refreshing...")
+            self.refresh_token()  # Refresh the token
+            # Update the authorization header
+            headers["Authorization"] = f"Bearer {self.token['access_token']}"
+        elif response.status_code == 404:  # server not connected
+            print(
+                """Server Disconnected. Please press connect in the
+                Multion extension popup"""
+            )
+        else:
+            print(f"Request failed with status code: {response.status_code}")
+            print(f"Response text: {response.text}")
+
+    def new_session(self, data):
+        print(
+            "WARNING: 'new_session' is deprecated and will be removed in a future version. Use 'create_session' instead."
+        )
+        url = f"{self.api_url}/sessions"
+        # print("running new session")
+        return self.post(url, data)
+
+    def create_session(self, data):
+        url = f"{self.api_url}/session"
+        # print("running create session")
+        return self.post(url, data)
+
+    def update_session(self, sessionId, data):
+        print(
+            "WARNING: 'update_session' is deprecated and will be removed in a future version. Use 'step_session' instead."
+        )
+        url = f"{self.api_url}/session/{sessionId}"
+        # print("session updated")
+        return self.post(url, data)
+
+    def step_session(self, sessionId, data):
+        url = f"{self.api_url}/session/{sessionId}"
+        # print("session stepped")
+        return self.post(url, data)
+
+    def close_session(self, sessionId):
+        url = f"{self.api_url}/session/{sessionId}"
+        # print("session closed")
+        return self.delete(url)
 
     def close_sessions(self):
-        if self.token is None and self.api_key is None:
-            raise Exception("You must log in before closing a session.")
-        
         url = f"{self.api_url}/sessions"
-        response = requests.delete(url)
-
-        # end all agentops sessions with state "Success"
-        if self.agentops_client:
-            active_sessions = self.list_sessions()
-            if "session_ids" in active_sessions:
-                for session_id in active_sessions["session_ids"]: 
-                    self.agentops_client.end_session(session_id=session_id, end_state="Success")
-
-        if response.ok:  # checks if status_code is 200-400
-            try:
-                return response.json()["response"]
-            except Exception as e:
-                print(f"ERROR: {e}")
-        else:
-            print(f"Failed to close session. Status code: {response.status_code}")
+        # print("all sessions closed")
+        return self.delete(url)
 
     def list_sessions(self):
         return self.get()
@@ -446,7 +494,6 @@ class _Multion:
 
         # Create a BytesIO object and read the image bytes
         img_io = BytesIO(img_bytes)
-
         # Convert BytesIO into Image
         img = Image.open(img_io)
 
@@ -558,55 +605,204 @@ def post(url, data):
 def get():
     return _multion_instance.get()
 
-def new_session(data, agentops_api_key=None):
-    return _multion_instance.new_session(data, agentops_api_key)
+
+def browse(data):
+    """
+    Browse the web using MultiOn by calling the high-level browse API endpoint.
+
+    Args:
+        data (dict): A dictionary containing the parameters for the browsing operation.
+
+            - cmd (str): A detailed and specific natural language instruction for guiding the web browsing experience.
+            - url (str, optional): The initial URL to start the browsing session, defaults to the current URL if not provided.
+            - maxSteps (int, optional): The maximum number of steps the browsing operation should attempt, defaults to a predefined value `20` if not specified.
+            - stream (bool, optional): A flag indicating whether to stream the browsing session, enabling real-time updates.
+            - modelArgs (dict, optional): A dictionary containing additional arguments for the model that will be used during the browsing session.
+
+    Returns:
+        dict: A dictionary containing the results of the browsing operation. It includes the following keys:
+
+            - status (str): The current status of the browsing operation.
+            - lastUrl (str): The last URL visited during the browsing session.
+            - content (str): The content of the last visited page, typically in HTML format.
+            - screenshot (str): A base64 encoded string representing a screenshot of the last visited page.
+    """
+    return _multion_instance.browse(data)
 
 
+@deprecated
+def new_session(data):
+    """
+    Create a new browsing session based on a user's command or request.
+
+    The command should include the full info required for the session.
+    Optionally include an url (defaults to google.com if no better option) to start the session.
+
+    Args:
+        data (dict): The data containing the input command and optional URL.
+
+    Returns:
+        dict: The result of the session creation including sessionId, status, url, screenshot, and message.
+    """
+    return _multion_instance.new_session(data)
+
+
+@deprecated
 def update_session(sessionId, data):
+    """
+    Update an existing browsing session with a new command based on a user's command or request to search.
+
+    Optionally include an url to update the session.
+
+    Args:
+        sessionId (str): The ID of the session to be updated.
+        data (dict): The data containing the input command and optional URL.
+
+    Returns:
+        dict: The result of the session update including sessionId, status, url, screenshot, and message.
+    """
     return _multion_instance.update_session(sessionId, data)
 
 
+def create_session(data):
+    """
+    Create a new browsing session based on a user's command or request.
+
+    Args:
+        data (dict): The data containing the input command and optional URL.
+
+    Returns:
+        dict: The result of the session creation including sessionId, status, url, screenshot, and message.
+    """
+    return _multion_instance.create_session(data)
+
+
+def step_session(sessionId, data):
+    """
+    Step an existing browsing session with a new command based on a user's command or request.
+
+    Args:
+        sessionId (str): The ID of the session to be updated.
+        data (dict): The data containing the input command and optional URL.
+
+    Returns:
+        dict: The result of the session update including sessionId, status, url, screenshot, and message.
+    """
+    return _multion_instance.step_session(sessionId, data)
+
+
 def close_session(sessionId):
+    """
+    Close an existing browsing session.
+
+    Args:
+        sessionId (str): The ID of the session to be closed.
+
+    Returns:
+        dict: The result of the session closure including sessionId, status, url, screenshot, and message.
+    """
     return _multion_instance.close_session(sessionId)
 
 
 def close_sessions():
+    """
+    Close all existing browsing sessions.
+
+    Returns:
+        dict: The result of the sessions closure including a list of sessionIds, their status, and messages.
+    """
     return _multion_instance.close_sessions()
 
 
 def list_sessions():
+    """
+    List all active browsing sessions.
+
+    Returns:
+        list: A list of active sessions, each containing sessionId, status, url, and other relevant information.
+    """
     return _multion_instance.list_sessions()
 
 
 def delete_token():
+    """
+    Delete the current authentication token.
+    """
     _multion_instance.delete_token()
 
 
 def get_screenshot(response, height=None, width=None):
+    """
+    Get a screenshot from the given response object.
+
+    Args:
+        response: The response object to capture as a screenshot.
+        height (optional): The height of the screenshot in pixels.
+        width (optional): The width of the screenshot in pixels.
+
+    Returns:
+        The screenshot image.
+    """
     return _multion_instance.get_screenshot(response, height, width)
 
 
 def refresh_token():
+    """
+    Refresh the current authentication token.
+    """
     _multion_instance.refresh_token()
 
 
 def get_token():
+    """
+    Retrieve the current authentication token.
+
+    Returns:
+        The current authentication token.
+    """
     return _multion_instance.get_token()
 
 
 def get_remote():
+    """
+    Get the current remote state.
+
+    Returns:
+        The current remote state as a boolean.
+    """
     return _multion_instance.get_remote()
 
 
 def set_remote(value: bool):
+    """
+    Set the remote state.
+
+    Args:
+        value (bool): The new value for the remote state.
+    """
     return _multion_instance.set_remote(value)
 
 
 def get_video(session_id: str):
+    """
+    Get the video for the given session ID.
+
+    Args:
+        session_id (str): The session ID to retrieve the video for.
+
+    Returns:
+        The video associated with the given session ID.
+    """
     return _multion_instance.get_video(session_id)
 
 
 def set_api_url(url: str):
+    """
+    Set the API URL.
+
+    Args:
+        url (str): The new API URL to be set.
+    """
     _multion_instance.set_api_url(url)
 
 
