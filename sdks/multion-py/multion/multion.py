@@ -366,8 +366,7 @@ class _Multion:
         headers = self.set_headers()
         url = f"{self.api_url}/browse"
 
-        browse_event = Event(event_type="browse", action_type="api")
-        self.agentops_current_event = browse_event
+        self.agentops_current_event = Event(event_type="browse", action_type="api")
 
         try:
             response = requests.post(url, json=data, headers=headers)
@@ -423,8 +422,7 @@ class _Multion:
                                         tags=['multion'],
                                         org_key=self.agentops_org_key,)
 
-        create_session_event = Event(event_type="create_session", action_type="api")
-        self.agentops_current_event = create_session_event
+        self.agentops_current_event = Event(event_type="create_session", action_type="api")
 
         post_response = self.post(url, data)
 
@@ -441,9 +439,17 @@ class _Multion:
         # print("session updated")
         return self.post(url, data)
 
-    def step_session(self, sessionId, data): #TODO record agentops event?
+    def step_session(self, sessionId, data):
         url = f"{self.api_url}/session/{sessionId}"
         # print("session stepped")
+
+        if self.agentops_client is None:
+            self.agentops_client = Client(api_key=self.agentops_api_key,
+                                        tags=['multion'],
+                                        org_key=self.agentops_org_key,)
+
+        self.agentops_current_event = Event(event_type="step_session", action_type="api")
+
         return self.post(url, data)
 
     def close_session(self, sessionId):
