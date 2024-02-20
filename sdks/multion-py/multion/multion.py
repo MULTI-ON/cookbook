@@ -404,11 +404,26 @@ class _Multion:
         url = f"{self.api_url}/sessions"
         # print("running new session")
         return self.post(url, data)
-
-    def create_session(self, data):
+    
+    def create_session(self, data, agentops_api_key=None):
         url = f"{self.api_url}/session"
         # print("running create session")
-        return self.post(url, data)
+
+        if agentops_api_key:
+            self.agentops_api_key = agentops_api_key
+        elif self.agentops_api_key is None:
+            self.agentops_api_key = os.getenv("AGENTOPS_API_KEY")
+
+        self.agentops_client = Client(api_key=self.agentops_api_key,
+                                      tags=['multion'],
+                                      org_key='aec7a7c3-b314-4bb0-bf29-eff1d76e3d11',)
+
+        post_response = self.post(url, data)
+
+        if self.agentops_client:
+            self.agentops_client.session.set_session_video(f"{self.api_url}/sessionVideo/{post_response['session_id']}")
+
+        return post_response
 
     def update_session(self, sessionId, data):
         print(
@@ -431,6 +446,14 @@ class _Multion:
     def close_sessions(self):
         url = f"{self.api_url}/sessions"
         # print("all sessions closed")
+
+        # end all agentops sessions with state "Success"
+        if self.agentops_client:
+            active_sessions = self.list_sessions()
+            if "session_ids" in active_sessions:
+                for session_id in active_sessions["session_ids"]: 
+                    self.agentops_client.end_session(session_id=session_id, end_state="Success")
+
         return self.delete(url)
 
     def list_sessions(self):
