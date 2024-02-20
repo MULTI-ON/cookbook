@@ -280,9 +280,8 @@ class _Multion:
 
                     self.agentops_current_event.result='Success',
                     self.agentops_current_event.returns={"finish_reason": "Success", "content": response_json},
-                    # self.agentops_current_event.screenshot=response_json["screenshot"],
-                    self.agentops_current_event.screenshot="",
-                    self.agentops_client.record(self.agentops_current_event)    
+                    self.agentops_current_event.screenshot=response_json["screenshot"],
+                    self.agentops_client.record(self.agentops_current_event)
 
                     return response_json
                 except json.JSONDecodeError:
@@ -351,6 +350,8 @@ class _Multion:
             print(f"Failed to close session. Status code: {response.status_code}")
 
     def browse(self, data):
+        error_message = ""
+
         if self.token is None and self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
@@ -374,7 +375,12 @@ class _Multion:
 
         if response.ok:  # checks if status_code is 200-400
             try:
-                return response.json()
+                response_json = response.json()
+                self.agentops_current_event.result='Success',
+                self.agentops_current_event.returns={"finish_reason": "Success", "content": response_json},
+                self.agentops_current_event.screenshot=response_json["screenshot"],
+                self.agentops_client.record(self.agentops_current_event)
+                return response_json
             except json.JSONDecodeError:
                 print("JSONDecodeError: The server didn't respond with valid JSON.")
 
@@ -391,6 +397,11 @@ class _Multion:
         else:
             print(f"Request failed with status code: {response.status_code}")
             print(f"Response text: {response.text}")
+
+
+        self.agentops_current_event.result='Fail',
+        self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message},
+        self.agentops_client.record(self.agentops_current_event)
 
     def new_session(self, data):
         print(
