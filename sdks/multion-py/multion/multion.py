@@ -257,8 +257,8 @@ class _Multion:
 
         if self.token is None and self.api_key is None:
             error_message = "You must log in or provide an API key before making API calls."
-            self.agentops_current_event.result='Fail',
-            self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message},
+            self.agentops_current_event.result='Fail'
+            self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message}
             self.agentops_client.record(self.agentops_current_event)
             
             raise Exception(error_message)
@@ -278,45 +278,53 @@ class _Multion:
                 try:
                     response_json = response.json()["response"]["data"]
 
-                    self.agentops_current_event.result='Success',
-                    self.agentops_current_event.returns={"finish_reason": "Success", "content": response_json},
-                    self.agentops_current_event.screenshot=response_json["screenshot"],
+                    self.agentops_current_event.result='Success'
+                    self.agentops_current_event.returns={"finish_reason": "Success", "content": response_json}
+                    self.agentops_current_event.screenshot=response_json["screenshot"]
                     self.agentops_client.record(self.agentops_current_event)
+
+                    import pprint
+
+                    pprint.pprint(vars(self.agentops_current_event))
+                    pprint.pprint(vars(self.agentops_client))
 
                     return response_json
                 except json.JSONDecodeError:
-                    print("JSONDecodeError: The server didn't respond with valid JSON.")
+                    error_message = "JSONDecodeError: The server didn't respond with valid JSON."
+                    print(error_message)
                 break  # if response is valid then exit loop
             elif response.status_code == 401:  # token has expired
-                print("Invalid token. Refreshing...")
+                error_message = "Invalid token. Refreshing..."
+                print(error_message)
                 self.refresh_token()  # Refresh the token
                 headers["Authorization"] = f"Bearer {self.token['access_token']}"
             elif response.status_code == 404:  # server not connected
-                print(
-                    """Server Disconnected. Please press connect in the
+                error_message = """Server Disconnected. Please press connect in the
                       Multion extension popup"""
-                )
+                print(error_message)
             else:
-                print(f"Request failed with status code: {response.status_code}")
-                print(f"Response text: {response.text}")
+                error_message = f"Request failed with status code: {response.status_code}"
+                error_message += f"\nResponse text: {response.text}"
+                print(error_message)
 
             time.sleep(1)  # you may want to increase this value depending on the API
             attempts += 1
 
         if attempts == MAX_ATTEMPTS:
-            print(f"Request failed with status code: {response.status_code}")
-            print(f"Response text: {response.text}")
-
-            error_message = "Failed to get a valid response after", MAX_ATTEMPTS, " attempts"
+            error_message = f"Request failed with status code: {response.status_code}"
+            error_message += f"\nResponse text: {response.text}"
+            print(error_message)
+            exception_message = f"Failed to get a valid response after {MAX_ATTEMPTS} attempts"
+            error_message += "\n" + exception_message
             
-            self.agentops_current_event.result='Fail',
-            self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message},
+            self.agentops_current_event.result='Fail'
+            self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message}
             self.agentops_client.record(self.agentops_current_event)
 
-            raise Exception(error_message)
+            raise Exception(exception_message)
             
-        self.agentops_current_event.result='Fail',
-        self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message},
+        self.agentops_current_event.result='Fail'
+        self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message}
         self.agentops_client.record(self.agentops_current_event)
         
     def get(self):
@@ -371,36 +379,38 @@ class _Multion:
         try:
             response = requests.post(url, json=data, headers=headers)
         except requests.exceptions.RequestException as e:
-            print(f"Request failed due to an error: {e}")
+            error_message = f"Request failed due to an error: {e}"
+            print(error_message)
 
         if response.ok:  # checks if status_code is 200-400
             try:
                 response_json = response.json()
-                self.agentops_current_event.result='Success',
-                self.agentops_current_event.returns={"finish_reason": "Success", "content": response_json},
-                self.agentops_current_event.screenshot=response_json["screenshot"],
+                self.agentops_current_event.result='Success'
+                self.agentops_current_event.returns={"finish_reason": "Success", "content": response_json}
+                self.agentops_current_event.screenshot=response_json["screenshot"]
                 self.agentops_client.record(self.agentops_current_event)
                 return response_json
             except json.JSONDecodeError:
-                print("JSONDecodeError: The server didn't respond with valid JSON.")
+                error_message = "JSONDecodeError: The server didn't respond with valid JSON."
+                print(error_message)
 
         elif response.status_code == 401:  # token has expired
-            print("Invalid token. Refreshing...")
+            error_message = "Invalid token. Refreshing..."
+            print(error_message)
             self.refresh_token()  # Refresh the token
             # Update the authorization header
             headers["Authorization"] = f"Bearer {self.token['access_token']}"
         elif response.status_code == 404:  # server not connected
-            print(
-                """Server Disconnected. Please press connect in the
+            error_message = """Server Disconnected. Please press connect in the
                 Multion extension popup"""
-            )
+            print(error_message)
         else:
-            print(f"Request failed with status code: {response.status_code}")
-            print(f"Response text: {response.text}")
+            error_message = f"Request failed with status code: {response.status_code}"
+            error_message += f"\nResponse text: {response.text}"
+            print(error_message)
 
-
-        self.agentops_current_event.result='Fail',
-        self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message},
+        self.agentops_current_event.result='Fail'
+        self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message}
         self.agentops_client.record(self.agentops_current_event)
 
     def new_session(self, data):
