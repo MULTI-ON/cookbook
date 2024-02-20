@@ -277,17 +277,10 @@ class _Multion:
             if response.ok:  # checks if status_code is 200-400
                 try:
                     response_json = response.json()["response"]["data"]
-
                     self.agentops_current_event.result='Success'
                     self.agentops_current_event.returns={"finish_reason": "Success", "content": response_json}
                     self.agentops_current_event.screenshot=response_json["screenshot"]
                     self.agentops_client.record(self.agentops_current_event)
-
-                    import pprint
-
-                    pprint.pprint(vars(self.agentops_current_event))
-                    pprint.pprint(vars(self.agentops_client))
-
                     return response_json
                 except json.JSONDecodeError:
                     error_message = "JSONDecodeError: The server didn't respond with valid JSON."
