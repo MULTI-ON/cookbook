@@ -14,7 +14,6 @@ from PIL import Image
 from io import BytesIO
 from IPython.display import Video
 from agentops import Client, Event
-from agentops.helpers import get_ISO_time
 
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
@@ -24,9 +23,10 @@ class _Multion:
         self.api_url = "https://api.multion.ai/public/api/v1"
 
         self._api_key = os.getenv("MULTION_API_KEY")  # Add this line
-        self._agentops_api_key = os.getenv("AGENTOPS_API_KEY")
-        
+
+        self.agentops_api_key = None
         self.agentops_client = None
+        self.agentops_current_event = None
 
         self.load_secrets(secrets_file)
         self.generate_fernet_key()
@@ -46,16 +46,6 @@ class _Multion:
         self._api_key = value
         if value:
             os.environ["MULTION_API_KEY"] = value
-    
-    @property
-    def agentops_api_key(self):
-        # Get the AgentOps API key from the instance variable or the environment variable
-        return self._agentops_api_key if self._agentops_api_key else os.getenv("AGENTOPS_API_KEY")
-    
-    @agentops_api_key.setter
-    def agentops_api_key(self, value):
-        # Allow setting the AgentOps API key manually
-        self._agentops_api_key = value
 
     def load_secrets(self, secrets_file):
         secrets_file = os.path.join(os.path.dirname(__file__), secrets_file)
@@ -68,6 +58,8 @@ class _Multion:
             secrets["FERNET_KEY"] = self.fernet_key
             with open(secrets_file, "w") as f:
                 json.dump(secrets, f, indent=4)
+
+        self.agentops_org_key = secrets.get("AGENTOPS_ORG_KEY")
 
     def generate_fernet_key(self):
         self.fernet_key = self.fernet_key.encode()
@@ -134,6 +126,11 @@ class _Multion:
             self.api_key = multion_api_key
         elif self.api_key is None:
             self.api_key = os.getenv("MULTION_API_KEY")
+
+        if agentops_api_key:
+            self.agentops_api_key = agentops_api_key
+        elif self.agentops_api_key is None:
+            self.agentops_api_key = os.getenv("AGENTOPS_API_KEY")
 
         if use_api:
             valid_api_key = self.verify_user(use_api)
@@ -256,19 +253,14 @@ class _Multion:
     
     def post(self, url, data):
 
-        init_timestamp = get_ISO_time()
         error_message = ""
 
         if self.token is None and self.api_key is None:
             error_message = "You must log in or provide an API key before making API calls."
-            self.agentops_client.record(Event(
-                        event_type="multion post (new_session/update_session)",
-                        result='Fail',
-                        returns={"finish_reason": "Fail",
-                                 "content": error_message},
-                        action_type='api',
-                        init_timestamp=init_timestamp
-                    ))
+            self.agentops_current_event.result='Fail',
+            self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message},
+            self.agentops_client.record(self.agentops_current_event)
+            
             raise Exception(error_message)
 
         headers = self.set_headers()
@@ -286,15 +278,11 @@ class _Multion:
                 try:
                     response_json = response.json()["response"]["data"]
 
-                    self.agentops_client.record(Event(
-                        event_type="multion post (new_session/update_session)",
-                        result='Success',
-                        returns={"finish_reason": "Success",
-                                 "content": response_json},
-                        action_type='screenshot',
-                        screenshot=response_json["screenshot"],
-                        init_timestamp=init_timestamp
-                    ))
+                    self.agentops_current_event.result='Success',
+                    self.agentops_current_event.returns={"finish_reason": "Success", "content": response_json},
+                    # self.agentops_current_event.screenshot=response_json["screenshot"],
+                    self.agentops_current_event.screenshot="",
+                    self.agentops_client.record(self.agentops_current_event)    
 
                     return response_json
                 except json.JSONDecodeError:
@@ -320,18 +308,17 @@ class _Multion:
             print(f"Request failed with status code: {response.status_code}")
             print(f"Response text: {response.text}")
 
-            error_message = "Failed to get a valid response after 5 attempts"
+            error_message = "Failed to get a valid response after", MAX_ATTEMPTS, " attempts"
             
-            self.agentops_client.record(Event(
-                    event_type="multion post (new_session/update_session)",
-                    result='Fail',
-                    returns={"finish_reason": "Fail",
-                                "content": error_message},
-                    action_type='api',
-                    init_timestamp=init_timestamp
-                ))
+            self.agentops_current_event.result='Fail',
+            self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message},
+            self.agentops_client.record(self.agentops_current_event)
 
             raise Exception(error_message)
+            
+        self.agentops_current_event.result='Fail',
+        self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message},
+        self.agentops_client.record(self.agentops_current_event)
         
     def get(self):
         if self.token is None and self.api_key is None:
@@ -369,8 +356,16 @@ class _Multion:
                 "You must log in or provide an API key before making API calls."
             )
 
+        if self.agentops_client is None:
+            self.agentops_client = Client(api_key=self.agentops_api_key,
+                                        tags=['multion'],
+                                        org_key=self.agentops_org_key,)
+
         headers = self.set_headers()
         url = f"{self.api_url}/browse"
+
+        browse_event = Event(event_type="browse", action_type="api")
+        self.agentops_current_event = browse_event
 
         try:
             response = requests.post(url, json=data, headers=headers)
@@ -405,18 +400,17 @@ class _Multion:
         # print("running new session")
         return self.post(url, data)
     
-    def create_session(self, data, agentops_api_key=None):
+    def create_session(self, data):
         url = f"{self.api_url}/session"
         # print("running create session")
 
-        if agentops_api_key:
-            self.agentops_api_key = agentops_api_key
-        elif self.agentops_api_key is None:
-            self.agentops_api_key = os.getenv("AGENTOPS_API_KEY")
+        if self.agentops_client is None:
+            self.agentops_client = Client(api_key=self.agentops_api_key,
+                                        tags=['multion'],
+                                        org_key=self.agentops_org_key,)
 
-        self.agentops_client = Client(api_key=self.agentops_api_key,
-                                      tags=['multion'],
-                                      org_key='aec7a7c3-b314-4bb0-bf29-eff1d76e3d11',)
+        create_session_event = Event(event_type="create_session", action_type="api")
+        self.agentops_current_event = create_session_event
 
         post_response = self.post(url, data)
 
@@ -433,7 +427,7 @@ class _Multion:
         # print("session updated")
         return self.post(url, data)
 
-    def step_session(self, sessionId, data):
+    def step_session(self, sessionId, data): #TODO record agentops event?
         url = f"{self.api_url}/session/{sessionId}"
         # print("session stepped")
         return self.post(url, data)
@@ -617,8 +611,8 @@ def api_key(value):
 
 
 # Expose the login and post methods at the module level
-def login(use_api=False, multion_api_key=None):
-    _multion_instance.login(use_api, multion_api_key)
+def login(use_api=False, multion_api_key=None, agentops_api_key=None):
+    _multion_instance.login(use_api, multion_api_key, agentops_api_key)
 
 
 def post(url, data):
