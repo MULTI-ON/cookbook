@@ -272,6 +272,7 @@ class _Multion:
                 response = requests.post(url, json=data, headers=headers)
             except requests.exceptions.RequestException as e:
                 error_message = f"Request failed due to an error: {e}\n"
+                print(error_message)
                 break
 
             if response.ok:  # checks if status_code is 200-400
@@ -300,9 +301,13 @@ class _Multion:
                 error_message += f"\nResponse text: {response.text}"
                 print(error_message)
 
+            # If we've not returned by now, sleep before the next attempt
             time.sleep(1)  # you may want to increase this value depending on the API
+
+            # Increment the attempts counter
             attempts += 1
 
+        # If we've exhausted all attempts and not returned, raise an error
         if attempts == MAX_ATTEMPTS:
             error_message = f"Request failed with status code: {response.status_code}"
             error_message += f"\nResponse text: {response.text}"
