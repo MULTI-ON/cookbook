@@ -28,7 +28,8 @@ class AgentOpsClient:
     def org_key(self, value):
         self._org_key = value
 
-    # TODO: Call the setter to create the client
+    # TODO: Call the setter to create the client?
+    # This will not work if we want to check if self.agentops.client exists before calling end_session
     @property
     def client(self):
         # if not self._client:
