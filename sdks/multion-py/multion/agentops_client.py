@@ -8,7 +8,7 @@ class AgentOpsClient:
         self._api_key = None
         self._org_key = None
         self._client = None
-        self.current_event = Event()
+        self.current_event = Event(event_type="api")
 
     @property
     def api_key(self):
@@ -24,9 +24,9 @@ class AgentOpsClient:
     def org_key(self):
         return self._org_key
 
-    @api_key.setter
+    @org_key.setter
     def org_key(self, value):
-        self.org_key = value
+        self._org_key = value
 
     # TODO: Call the setter to create the client
     @property
