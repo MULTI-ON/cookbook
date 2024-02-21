@@ -4,43 +4,20 @@ import os
 
 
 class AgentOpsClient:
-    def __init__(self):
-        self._api_key = None
-        self._org_key = None
-        self._client = None
+    def __init__(self, api_key: str = None, org_key: str = None):
+        self._api_key = api_key or os.getenv("AGENTOPS_API_KEY")
+        self._org_key = org_key or os.getenv("AGENTOPS_ORG_KEY")
         self.current_event = Event(event_type="api")
+        self.client = Client(api_key=self._api_key,
+                             tags=['multion'],
+                             org_key=self._org_key,
+                             bypass_new_session=True)
 
-    @property
-    def api_key(self):
-        return self._api_key if self._api_key else os.getenv("AGENTOPS_API_KEY")
+    def start_session(self):
+        self.client.start_session()
 
-    @api_key.setter
-    def api_key(self, value):
-        self._api_key = value
-        if value:
-            os.environ["AGENTOPS_API_KEY"] = value
-
-    @property
-    def org_key(self):
-        return self._org_key
-
-    @org_key.setter
-    def org_key(self, value):
-        self._org_key = value
-
-    # TODO: Call the setter to create the client?
-    # This will not work if we want to check if self.agentops.client exists before calling end_session
-    @property
-    def client(self):
-        # if not self._client:
-        #     self.client = None
-        return self._client
-
-    @client.setter
-    def client(self, tags: List[str] = ["multion"]):
-        self._client = Client(api_key=self.api_key,
-                              tags=tags,
-                              org_key=self.org_key)
+    def add_tags(self, tags: List[str]):
+        self.client.add_tags(tags)
 
     def record(self):
         if self.client:
