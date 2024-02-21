@@ -13,7 +13,9 @@ import uuid
 from PIL import Image
 from io import BytesIO
 from IPython.display import Video
-from agentops import Client, Event
+from .agentops_client import AgentOpsClient
+from agentops import Event
+
 
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
@@ -24,9 +26,7 @@ class _Multion:
 
         self._api_key = os.getenv("MULTION_API_KEY")  # Add this line
 
-        self.agentops_api_key = None
-        self.agentops_client = None
-        self.agentops_current_event = None
+        self.agentops = AgentOpsClient()
 
         self.load_secrets(secrets_file)
         self.generate_fernet_key()
@@ -59,7 +59,7 @@ class _Multion:
             with open(secrets_file, "w") as f:
                 json.dump(secrets, f, indent=4)
 
-        self.agentops_org_key = secrets.get("AGENTOPS_ORG_KEY")
+        self.agentops.org_key = secrets.get("AGENTOPS_ORG_KEY")
 
     def generate_fernet_key(self):
         self.fernet_key = self.fernet_key.encode()
@@ -114,8 +114,7 @@ class _Multion:
             print(f"An error occurred while verifying user: {str(response)}")
             return False
 
-    def login(self, use_api=False, multion_api_key=None, agentops_api_key=None):      
-   
+    def login(self, use_api=False, multion_api_key=None, agentops_api_key=None):
         """
         Log in to the Multion service using an API key or by obtaining a new token.
 
@@ -127,10 +126,7 @@ class _Multion:
         elif self.api_key is None:
             self.api_key = os.getenv("MULTION_API_KEY")
 
-        if agentops_api_key:
-            self.agentops_api_key = agentops_api_key
-        elif self.agentops_api_key is None:
-            self.agentops_api_key = os.getenv("AGENTOPS_API_KEY")
+        self.agentops.api_key = agentops_api_key
 
         if use_api:
             valid_api_key = self.verify_user(use_api)
@@ -140,7 +136,7 @@ class _Multion:
             else:
                 self.issue_api_key()
                 return
-        
+
         valid_token = self.verify_user()
         if valid_token:
             print("Logged in.")
@@ -202,7 +198,7 @@ class _Multion:
         """
         # Get the MAC address and use it to generate a UUID
         mac_num = uuid.getnode()
-        mac = ":".join(("%012X" % mac_num)[i : i + 2] for i in range(0, 12, 2))
+        mac = ":".join(("%012X" % mac_num)[i: i + 2] for i in range(0, 12, 2))
         device_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, mac)
         # print(device_uuid)
 
@@ -214,7 +210,8 @@ class _Multion:
             with open(self.token_file, "rb") as f:
                 try:
                     encrypted_token = f.read()
-                    decrypted_token = self.fernet.decrypt(encrypted_token).decode()
+                    decrypted_token = self.fernet.decrypt(
+                        encrypted_token).decode()
                     self.token = json.loads(decrypted_token)
                 except json.JSONDecodeError:
                     print("Error reading token from file. The file might be corrupted.")
@@ -250,17 +247,18 @@ class _Multion:
         if self.token is not None:
             headers["Authorization"] = f"Bearer {self.token['access_token']}"
         return headers
-    
+
     def post(self, url, data):
 
         error_message = ""
 
         if self.token is None and self.api_key is None:
             error_message = "You must log in or provide an API key before making API calls."
-            self.agentops_current_event.result='Fail'
-            self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message}
-            self.agentops_client.record(self.agentops_current_event)
-            
+            self.agentops.current_event.result = 'Fail'
+            self.agentops.current_event.returns = {
+                "finish_reason": "Fail", "content": error_message}
+            self.agentops.record()
+
             raise Exception(error_message)
 
         headers = self.set_headers()
@@ -278,10 +276,11 @@ class _Multion:
             if response.ok:  # checks if status_code is 200-400
                 try:
                     response_json = response.json()["response"]["data"]
-                    self.agentops_current_event.result='Success'
-                    self.agentops_current_event.returns={"finish_reason": "Success", "content": response_json}
-                    self.agentops_current_event.screenshot=response_json["screenshot"]
-                    self.agentops_client.record(self.agentops_current_event)
+                    self.agentops.current_event.result = 'Success'
+                    self.agentops.current_event.returns = {
+                        "finish_reason": "Success", "content": response_json}
+                    self.agentops.current_event.screenshot = response_json["screenshot"]
+                    self.agentops.record()
                     return response_json
                 except json.JSONDecodeError:
                     error_message = "JSONDecodeError: The server didn't respond with valid JSON."
@@ -302,7 +301,8 @@ class _Multion:
                 print(error_message)
 
             # If we've not returned by now, sleep before the next attempt
-            time.sleep(1)  # you may want to increase this value depending on the API
+            # you may want to increase this value depending on the API
+            time.sleep(1)
 
             # Increment the attempts counter
             attempts += 1
@@ -314,17 +314,19 @@ class _Multion:
             print(error_message)
             exception_message = f"Failed to get a valid response after {MAX_ATTEMPTS} attempts"
             error_message += "\n" + exception_message
-            
-            self.agentops_current_event.result='Fail'
-            self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message}
-            self.agentops_client.record(self.agentops_current_event)
+
+            self.agentops.current_event.result = 'Fail'
+            self.agentops.current_event.returns = {
+                "finish_reason": "Fail", "content": error_message}
+            self.agentops.record()
 
             raise Exception(exception_message)
-            
-        self.agentops_current_event.result='Fail'
-        self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message}
-        self.agentops_client.record(self.agentops_current_event)
-        
+
+        self.agentops.current_event.result = 'Fail'
+        self.agentops.current_event.returns = {
+            "finish_reason": "Fail", "content": error_message}
+        self.agentops.record()
+
     def get(self):
         if self.token is None and self.api_key is None:
             raise Exception(
@@ -341,7 +343,7 @@ class _Multion:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
             )
-        
+
         if self.agentops_client:
             self.agentops_client.end_session(end_state="Success")
 
@@ -353,7 +355,8 @@ class _Multion:
             except Exception as e:
                 print(f"ERROR: {e}")
         else:
-            print(f"Failed to close session. Status code: {response.status_code}")
+            print(
+                f"Failed to close session. Status code: {response.status_code}")
 
     def browse(self, data):
         error_message = ""
@@ -363,15 +366,13 @@ class _Multion:
                 "You must log in or provide an API key before making API calls."
             )
 
-        if self.agentops_client is None:
-            self.agentops_client = Client(api_key=self.agentops_api_key,
-                                        tags=['multion'],
-                                        org_key=self.agentops_org_key,)
+        self.agentops.client = ["multion"]
 
         headers = self.set_headers()
         url = f"{self.api_url}/browse"
 
-        self.agentops_current_event = Event(event_type="browse", action_type="api")
+        self.agentops.current_event = Event(
+            event_type="browse", action_type="api")
 
         try:
             response = requests.post(url, json=data, headers=headers)
@@ -382,10 +383,11 @@ class _Multion:
         if response.ok:  # checks if status_code is 200-400
             try:
                 response_json = response.json()
-                self.agentops_current_event.result='Success'
-                self.agentops_current_event.returns={"finish_reason": "Success", "content": response_json}
-                self.agentops_current_event.screenshot=response_json["screenshot"]
-                self.agentops_client.record(self.agentops_current_event)
+                self.agentops.current_event.result = 'Success'
+                self.agentops.current_event.returns = {
+                    "finish_reason": "Success", "content": response_json}
+                self.agentops.current_event.screenshot = response_json["screenshot"]
+                self.agentops.record()
                 return response_json
             except json.JSONDecodeError:
                 error_message = "JSONDecodeError: The server didn't respond with valid JSON."
@@ -406,9 +408,10 @@ class _Multion:
             error_message += f"\nResponse text: {response.text}"
             print(error_message)
 
-        self.agentops_current_event.result='Fail'
-        self.agentops_current_event.returns={"finish_reason": "Fail","content": error_message}
-        self.agentops_client.record(self.agentops_current_event)
+        self.agentops.current_event.result = 'Fail'
+        self.agentops.current_event.returns = {
+            "finish_reason": "Fail", "content": error_message}
+        self.agentops.record()
 
     def new_session(self, data):
         print(
@@ -417,22 +420,24 @@ class _Multion:
         url = f"{self.api_url}/sessions"
         # print("running new session")
         return self.post(url, data)
-    
+
     def create_session(self, data):
         url = f"{self.api_url}/session"
         # print("running create session")
 
         if self.agentops_client is None:
             self.agentops_client = Client(api_key=self.agentops_api_key,
-                                        tags=['multion'],
-                                        org_key=self.agentops_org_key,)
+                                          tags=['multion'],
+                                          org_key=self.agentops_org_key,)
 
-        self.agentops_current_event = Event(event_type="create_session", action_type="api")
+        self.agentops.current_event = Event(
+            event_type="create_session", action_type="api")
 
         post_response = self.post(url, data)
 
         if self.agentops_client:
-            self.agentops_client.session.set_session_video(f"{self.api_url}/sessionVideo/{post_response['session_id']}")
+            self.agentops_client.session.set_session_video(
+                f"{self.api_url}/sessionVideo/{post_response['session_id']}")
 
         return post_response
 
@@ -450,10 +455,11 @@ class _Multion:
 
         if self.agentops_client is None:
             self.agentops_client = Client(api_key=self.agentops_api_key,
-                                        tags=['multion'],
-                                        org_key=self.agentops_org_key,)
+                                          tags=['multion'],
+                                          org_key=self.agentops_org_key,)
 
-        self.agentops_current_event = Event(event_type="step_session", action_type="api")
+        self.agentops.current_event = Event(
+            event_type="step_session", action_type="api")
 
         return self.post(url, data)
 
@@ -470,8 +476,9 @@ class _Multion:
         if self.agentops_client:
             active_sessions = self.list_sessions()
             if "session_ids" in active_sessions:
-                for session_id in active_sessions["session_ids"]: 
-                    self.agentops_client.end_session(session_id=session_id, end_state="Success")
+                for session_id in active_sessions["session_ids"]:
+                    self.agentops_client.end_session(
+                        session_id=session_id, end_state="Success")
 
         return self.delete(url)
 
@@ -497,7 +504,8 @@ class _Multion:
         if self.token is not None and self.token["expires_at"] > time.time():
             return self.token
 
-        response = requests.get(f"{self.api_url}/get_token?client_id={self.client_id}")
+        response = requests.get(
+            f"{self.api_url}/get_token?client_id={self.client_id}")
         if response.status_code == 200:
             data = response.json()
             if "access_token" in data:
