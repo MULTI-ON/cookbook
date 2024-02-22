@@ -26,8 +26,7 @@ class _Multion:
 
         self._api_key = os.getenv("MULTION_API_KEY")  # Add this line
 
-        self.agentops = AgentOpsClient(
-            api_key="e2d78f13-1585-4d45-b482-f67a42ae6099")
+        self.agentops = AgentOpsClient(tags=["prod"])
 
         self.load_secrets(secrets_file)
         self.generate_fernet_key()
@@ -356,10 +355,8 @@ class _Multion:
         headers = self.set_headers()
         url = f"{self.api_url}/browse"
 
-        self.agentops.current_event = Event(
-            event_type="browse", action_type="api")
-
         self.agentops.start_session()
+        self.agentops.current_event = Event(event_type="browse")
 
         try:
             response = requests.post(url, json=data, headers=headers)
@@ -408,16 +405,11 @@ class _Multion:
         # print("running create session")
 
         self.agentops.start_session()
-
-        self.agentops.current_event = Event(
-            event_type="create_session", action_type="api")
+        self.agentops.current_event = Event(event_type="create_session")
 
         post_response = self.post(url, data)
 
-        # TODO
-        # if self.agentops_client:
-        #     self.agentops_client.session.set_session_video(
-        #         f"{self.api_url}/sessionVideo/{post_response['session_id']}")
+        self.agentops.client.set_session_video(post_response["session_id"])
 
         return post_response
 
@@ -433,9 +425,7 @@ class _Multion:
         url = f"{self.api_url}/session/{sessionId}"
         # print("session stepped")
 
-        self.agentops.start_session()
-        self.agentops.current_event = Event(
-            event_type="step_session", action_type="api")
+        self.agentops.current_event = Event(event_type="step_session")
 
         return self.post(url, data)
 
@@ -449,12 +439,11 @@ class _Multion:
         # print("all sessions closed")
 
         # end all agentops sessions with state "Success"
-        if self.agentops.client:
-            active_sessions = self.list_sessions()
-            if "session_ids" in active_sessions:
-                for session_id in active_sessions["session_ids"]:
-                    self.agentops.end_session(
-                        session_id=session_id, end_state="Success")
+        active_sessions = self.list_sessions()
+        if "session_ids" in active_sessions:
+            for session_id in active_sessions["session_ids"]:
+                self.agentops.end_session(
+                    session_id=session_id, end_state="Success")
 
         return self.delete(url)
 
