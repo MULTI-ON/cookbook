@@ -210,8 +210,7 @@ class _Multion:
             with open(self.token_file, "rb") as f:
                 try:
                     encrypted_token = f.read()
-                    decrypted_token = self.fernet.decrypt(
-                        encrypted_token).decode()
+                    decrypted_token = self.fernet.decrypt(encrypted_token).decode()
                     self.token = json.loads(decrypted_token)
                 except json.JSONDecodeError:
                     print("Error reading token from file. The file might be corrupted.")
