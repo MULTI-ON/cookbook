@@ -29,3 +29,6 @@ class AgentOpsClient:
     def end_session(self, end_state="Success"):
         if self.client:
             self.client.end_session(end_state=end_state)
+
+
+__all__ = ['AgentOpsClient', 'Event']

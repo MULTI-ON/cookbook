@@ -13,8 +13,8 @@ import uuid
 from PIL import Image
 from io import BytesIO
 from IPython.display import Video
-from .agentops_client import AgentOpsClient
-from agentops import Event
+from .agentops_client import AgentOpsClient, Event
+# from agentops import Event
 
 
 class _Multion:
@@ -25,8 +25,7 @@ class _Multion:
         self.api_url = "https://api.multion.ai/public/api/v1"
 
         self._api_key = os.getenv("MULTION_API_KEY")  # Add this line
-
-        self.agentops = AgentOpsClient(tags=["prod"])
+        self._agentops_org_key = None
 
         self.load_secrets(secrets_file)
         self.generate_fernet_key()
@@ -34,6 +33,9 @@ class _Multion:
 
         # Load token if it exists
         self.load_token()
+
+        self.agentops = AgentOpsClient(
+            tags=["prod"], org_key=self._agentops_org_key, api_key=os.getenv("AGENTOP_API_KEY"))
 
     @property
     def api_key(self):
@@ -58,6 +60,8 @@ class _Multion:
             secrets["FERNET_KEY"] = self.fernet_key
             with open(secrets_file, "w") as f:
                 json.dump(secrets, f, indent=4)
+
+        self._agentops_org_key = secrets.get("AGENTOPS_ORG_KEY")
 
     def generate_fernet_key(self):
         self.fernet_key = self.fernet_key.encode()
