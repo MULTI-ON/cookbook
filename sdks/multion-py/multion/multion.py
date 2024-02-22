@@ -60,8 +60,6 @@ class _Multion:
             with open(secrets_file, "w") as f:
                 json.dump(secrets, f, indent=4)
 
-        self.agentops.org_key = secrets.get("AGENTOPS_ORG_KEY")
-
     def generate_fernet_key(self):
         self.fernet_key = self.fernet_key.encode()
         self.fernet = Fernet(self.fernet_key)
@@ -253,9 +251,6 @@ class _Multion:
 
         if self.token is None and self.api_key is None:
             error_message = "You must log in or provide an API key before making API calls."
-            self.agentops.current_event.result = 'Fail'
-            self.agentops.current_event.returns = {
-                "finish_reason": "Fail", "content": error_message}
             self.agentops.record(result="Fail", returns={
                 "finish_reason": "Fail", "content": error_message})
 
@@ -276,11 +271,8 @@ class _Multion:
             if response.ok:  # checks if status_code is 200-400
                 try:
                     response_json = response.json()["response"]["data"]
-                    self.agentops.current_event.result = 'Success'
-                    self.agentops.current_event.returns = {
-                        "finish_reason": "Success", "content": response_json}
-                    self.agentops.current_event.screenshot = response_json["screenshot"]
-                    self.agentops.record()
+                    self.agentops.record(result="Success", returns={
+                        "finish_reason": "Success", "content": response_json}, screenshot=response_json["screenshot"])
                     return response_json
                 except json.JSONDecodeError:
                     error_message = "JSONDecodeError: The server didn't respond with valid JSON."
@@ -315,17 +307,13 @@ class _Multion:
             exception_message = f"Failed to get a valid response after {MAX_ATTEMPTS} attempts"
             error_message += "\n" + exception_message
 
-            self.agentops.current_event.result = 'Fail'
-            self.agentops.current_event.returns = {
-                "finish_reason": "Fail", "content": error_message}
-            self.agentops.record()
+            self.agentops.record(result="Fail", returns={
+                "finish_reason": "Fail", "content": error_message})
 
             raise Exception(exception_message)
 
-        self.agentops.current_event.result = 'Fail'
-        self.agentops.current_event.returns = {
-            "finish_reason": "Fail", "content": error_message}
-        self.agentops.record()
+        self.agentops.record(result="Fail", returns={
+            "finish_reason": "Fail", "content": error_message})
 
     def get(self):
         if self.token is None and self.api_key is None:
@@ -344,8 +332,7 @@ class _Multion:
                 "You must log in or provide an API key before making API calls."
             )
 
-        if self.agentops.client:
-            self.agentops.end_session(end_state="Success")
+        self.agentops.end_session(end_state="Success")
 
         headers = self.set_headers()
         response = requests.delete(url, headers=headers)
@@ -383,11 +370,8 @@ class _Multion:
         if response.ok:  # checks if status_code is 200-400
             try:
                 response_json = response.json()
-                self.agentops.current_event.result = 'Success'
-                self.agentops.current_event.returns = {
-                    "finish_reason": "Success", "content": response_json}
-                self.agentops.current_event.screenshot = response_json["screenshot"]
-                self.agentops.record()
+                self.agentops.record(result="Success", returns={
+                    "finish_reason": "Success", "content": response_json}, screenshot=response_json["screenshot"])
                 return response_json
             except json.JSONDecodeError:
                 error_message = "JSONDecodeError: The server didn't respond with valid JSON."
@@ -408,10 +392,8 @@ class _Multion:
             error_message += f"\nResponse text: {response.text}"
             print(error_message)
 
-        self.agentops.current_event.result = 'Fail'
-        self.agentops.current_event.returns = {
-            "finish_reason": "Fail", "content": error_message}
-        self.agentops.record()
+        self.agentops.record(result="Fail", returns={
+            "finish_reason": "Fail", "content": error_message})
 
     def new_session(self, data):
         print(
