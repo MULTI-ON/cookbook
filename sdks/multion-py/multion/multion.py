@@ -35,7 +35,7 @@ class _Multion:
         self.load_token()
 
         self.agentops = AgentOpsClient(
-            tags=["prod"], org_key=self._agentops_org_key, api_key=os.getenv("AGENTOP_API_KEY"))
+            tags=["prod"], org_key=self._agentops_org_key, api_key=os.getenv("AGENTOPS_API_KEY"))
 
     @property
     def api_key(self):
