@@ -14,8 +14,6 @@ from PIL import Image
 from io import BytesIO
 from IPython.display import Video
 from .agentops_client import AgentOpsClient, Event
-# from agentops import Event
-
 
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
