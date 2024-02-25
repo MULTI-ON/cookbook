@@ -332,8 +332,6 @@ class _Multion:
                 "You must log in or provide an API key before making API calls."
             )
 
-        self.agentops.end_session(end_state="Success")
-
         headers = self.set_headers()
         response = requests.delete(url, headers=headers)
         if response.ok:  # checks if status_code is 200-400
@@ -404,15 +402,9 @@ class _Multion:
     def create_session(self, data):
         url = f"{self.api_url}/session"
         # print("running create session")
-
         self.agentops.start_session()
         self.agentops.current_event = Event(event_type="create_session")
-
-        post_response = self.post(url, data)
-
-        self.agentops.client.set_session_video(post_response["session_id"])
-
-        return post_response
+        return self.post(url, data)
 
     def update_session(self, sessionId, data):
         print(
@@ -433,6 +425,7 @@ class _Multion:
     def close_session(self, sessionId):
         url = f"{self.api_url}/session/{sessionId}"
         # print("session closed")
+        self.agentops.end_session(end_state="Success", video_url=f"{self.api_url}/sessionVideo/{sessionId}")
         return self.delete(url)
 
     def close_sessions(self):
@@ -442,9 +435,8 @@ class _Multion:
         # end all agentops sessions with state "Success"
         active_sessions = self.list_sessions()
         if "session_ids" in active_sessions:
-            for session_id in active_sessions["session_ids"]:
-                self.agentops.end_session(
-                    session_id=session_id, end_state="Success")
+            for sessionId in active_sessions["session_ids"]:
+                self.agentops.end_session(end_state="Success", video_url=f"{self.api_url}/sessionVideo/{sessionId}")
 
         return self.delete(url)
 

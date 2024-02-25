@@ -1,7 +1,5 @@
 from agentops import Client, Event
 from typing import List
-import os
-
 
 class AgentOpsClient:
     def __init__(self, api_key: str = None, org_key: str = None, tags: List[str] = ["prod"]):
@@ -21,14 +19,9 @@ class AgentOpsClient:
                 event_type=self.current_event.event_type, action_type=self.current_event.action_type, **kwargs)
             self.client.record(self.current_event)
 
-    def set_session_video(self, session_id: str):
+    def end_session(self, video_url: None, end_state="Success"):
         if self.client:
-            self.agentops.client.session.set_session_video(
-                f"{self.api_url}/sessionVideo/{session_id}")
-
-    def end_session(self, end_state="Success"):
-        if self.client:
-            self.client.end_session(end_state=end_state)
+            self.client.end_session(end_state=end_state, video=video_url)
 
 
 __all__ = ['AgentOpsClient', 'Event']
