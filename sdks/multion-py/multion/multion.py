@@ -24,12 +24,12 @@ class _Multion:
 
         self._api_key = os.getenv("MULTION_API_KEY")  # Add this line
 
-        # self.load_secrets(secrets_file)
-        # self.generate_fernet_key()
-        # self.create_multion_directory()
+        self.load_secrets(secrets_file)
+        self.generate_fernet_key()
+        self.create_multion_directory()
 
-        # # Load token if it exists
-        # self.load_token()
+        # Load token if it exists
+        self.load_token()
 
     @property
     def api_key(self):
