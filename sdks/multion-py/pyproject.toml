@@ -17,6 +17,7 @@ cognitojwt = "^1.4.1"
 pillow = "^10.0.1"
 pytesseract = "^0.3.10"
 deprecated = "^1.2.14"
+pytest = "^8.0.2"
 
 
 [build-system]
