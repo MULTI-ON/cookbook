@@ -17,7 +17,7 @@ class AgentOpsClient:
     def record(self, **kwargs):
         if self.client:
             self.current_event = Event(event_type=self.current_event.event_type, action_type=self.current_event.action_type,
-                                       init_timestamp=self.current_event.init_timestamp, ** kwargs)
+                                       init_timestamp=self.current_event.init_timestamp, **kwargs)
             self.client.record(self.current_event)
 
     def end_session(self, video_url: None, end_state="Success"):
