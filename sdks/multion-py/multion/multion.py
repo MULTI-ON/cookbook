@@ -242,12 +242,12 @@ class _Multion:
     def parse_stream_chunks(self, response):
         for chunk in response.iter_lines():
             if chunk:
-                decoded_chunk = chunk.decode('utf-8')
-                json_str = decoded_chunk.replace('data: ', '')
+                decoded_chunk = chunk.decode("utf-8")
+                json_str = decoded_chunk.replace("data: ", "")
                 data = json.loads(json_str)
                 yield data
 
-    def post(self, url, data, canStream = False):
+    def post(self, url, data, canStream=False):
         if self.token is None and self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
@@ -260,7 +260,7 @@ class _Multion:
         while attempts < MAX_ATTEMPTS:  # tries up to 3 times
             try:
                 stream = False
-                if 'stream' in data.keys() and data['stream']:
+                if "stream" in data.keys() and data["stream"]:
                     stream = True
                 response = requests.post(url, json=data, headers=headers, stream=stream)
                 if stream and canStream:
