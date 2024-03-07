@@ -239,6 +239,14 @@ class _Multion:
             headers["Authorization"] = f"Bearer {self.token['access_token']}"
         return headers
 
+    def parse_stream_chunks(self, response):
+        for chunk in response.iter_lines():
+            if chunk:
+                decoded_chunk = chunk.decode('utf-8')
+                json_str = decoded_chunk.replace('data: ', '')
+                data = json.loads(json_str)
+                yield data
+
     def post(self, url, data):
         if self.token is None and self.api_key is None:
             raise Exception(
@@ -251,7 +259,12 @@ class _Multion:
         attempts = 0
         while attempts < MAX_ATTEMPTS:  # tries up to 3 times
             try:
-                response = requests.post(url, json=data, headers=headers)
+                stream = False
+                if 'stream' in data.keys() and data['stream']:
+                    stream = True
+                response = requests.post(url, json=data, headers=headers, stream=stream)
+                if stream:
+                    return self.parse_stream_chunks(response)
             except requests.exceptions.RequestException as e:
                 print(f"Request failed due to an error: {e}")
                 break
@@ -362,13 +375,13 @@ class _Multion:
         # print("running create session")
         return self.post(url, data)
 
-    def update_session(self, sessionId, data):
-        print(
-            "WARNING: 'update_session' is deprecated and will be removed in a future version. Use 'step_session' instead."
-        )
-        url = f"{self.api_url}/session/{sessionId}"
-        # print("session updated")
-        return self.post(url, data)
+    # def update_session(self, sessionId, data):
+    #     print(
+    #         "WARNING: 'update_session' is deprecated and will be removed in a future version. Use 'step_session' instead."
+    #     )
+    #     url = f"{self.api_url}/session/{sessionId}"
+    #     # print("session updated")
+    #     return self.post(url, data)
 
     def step_session(self, sessionId, data):
         url = f"{self.api_url}/session/{sessionId}"
