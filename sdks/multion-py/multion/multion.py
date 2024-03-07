@@ -247,7 +247,7 @@ class _Multion:
                 data = json.loads(json_str)
                 yield data
 
-    def post(self, url, data):
+    def post(self, url, data, canStream = False):
         if self.token is None and self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
@@ -263,7 +263,7 @@ class _Multion:
                 if 'stream' in data.keys() and data['stream']:
                     stream = True
                 response = requests.post(url, json=data, headers=headers, stream=stream)
-                if stream:
+                if stream and canStream:
                     return self.parse_stream_chunks(response)
             except requests.exceptions.RequestException as e:
                 print(f"Request failed due to an error: {e}")
@@ -386,7 +386,7 @@ class _Multion:
     def step_session(self, sessionId, data):
         url = f"{self.api_url}/session/{sessionId}"
         # print("session stepped")
-        return self.post(url, data)
+        return self.post(url, data, canStream=True)
 
     def close_session(self, sessionId):
         url = f"{self.api_url}/session/{sessionId}"
