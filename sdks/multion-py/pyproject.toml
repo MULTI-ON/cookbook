@@ -18,7 +18,7 @@ pillow = "^10.0.1"
 pytesseract = "^0.3.10"
 deprecated = "^1.2.14"
 pytest = "^8.0.2"
-
+agentops = "^0.0.22"
 
 [build-system]
 requires = ["poetry-core"]

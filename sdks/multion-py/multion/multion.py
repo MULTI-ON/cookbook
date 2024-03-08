@@ -13,7 +13,7 @@ import uuid
 from PIL import Image
 from io import BytesIO
 from IPython.display import Video
-
+from .agentops_client import AgentOpsClient, Event
 
 class _Multion:
     def __init__(self, token_file="multion_token.enc", secrets_file="secrets.json"):
@@ -23,6 +23,7 @@ class _Multion:
         self.api_url = "https://api.multion.ai/public/api/v1"
 
         self._api_key = os.getenv("MULTION_API_KEY")  # Add this line
+        self._agentops_org_key = None
 
         self.load_secrets(secrets_file)
         self.generate_fernet_key()
@@ -30,6 +31,9 @@ class _Multion:
 
         # Load token if it exists
         self.load_token()
+
+        self.agentops = AgentOpsClient(
+            tags=["prod"], org_key=self._agentops_org_key, api_key=os.getenv("AGENTOPS_API_KEY"))
 
     @property
     def api_key(self):
@@ -54,6 +58,8 @@ class _Multion:
             secrets["FERNET_KEY"] = self.fernet_key
             with open(secrets_file, "w") as f:
                 json.dump(secrets, f, indent=4)
+
+        self._agentops_org_key = secrets.get("AGENTOPS_ORG_KEY")
 
     def generate_fernet_key(self):
         self.fernet_key = self.fernet_key.encode()
@@ -190,7 +196,7 @@ class _Multion:
         """
         # Get the MAC address and use it to generate a UUID
         mac_num = uuid.getnode()
-        mac = ":".join(("%012X" % mac_num)[i : i + 2] for i in range(0, 12, 2))
+        mac = ":".join(("%012X" % mac_num)[i: i + 2] for i in range(0, 12, 2))
         device_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, mac)
         # print(device_uuid)
 
@@ -248,10 +254,15 @@ class _Multion:
                 yield data
 
     def post(self, url, data, canStream=False):
+        
+        error_message = ""
+        
         if self.token is None and self.api_key is None:
-            raise Exception(
-                "You must log in or provide an API key before making API calls."
-            )
+            error_message = "You must log in or provide an API key before making API calls."
+            self.agentops.record(result="Fail", returns={
+                "finish_reason": "Fail", "content": error_message})
+
+            raise Exception(error_message)
 
         headers = self.set_headers()
 
@@ -266,40 +277,56 @@ class _Multion:
                 if stream and canStream:
                     return self.parse_stream_chunks(response)
             except requests.exceptions.RequestException as e:
-                print(f"Request failed due to an error: {e}")
+                error_message = f"Request failed due to an error: {e}\n"
+                print(error_message)
                 break
 
             if response.ok:  # checks if status_code is 200-400
                 try:
-                    return response.json()["response"]["data"]
+                    response_json = response.json()["response"]["data"]
+                    self.agentops.record(result="Success", returns={
+                        "finish_reason": "Success", "content": response_json}, screenshot=response_json["screenshot"])
+                    return response_json
                 except json.JSONDecodeError:
-                    print("JSONDecodeError: The server didn't respond with valid JSON.")
+                    error_message = "JSONDecodeError: The server didn't respond with valid JSON."
+                    print(error_message)
                 break  # if response is valid then exit loop
             elif response.status_code == 401:  # token has expired
-                print("Invalid token. Refreshing...")
+                error_message = "Invalid token. Refreshing..."
+                print(error_message)
                 self.refresh_token()  # Refresh the token
-                # Update the authorization header
                 headers["Authorization"] = f"Bearer {self.token['access_token']}"
             elif response.status_code == 404:  # server not connected
-                print(
-                    """Server Disconnected. Please press connect in the
+                error_message = """Server Disconnected. Please press connect in the
                       Multion extension popup"""
-                )
+                print(error_message)
             else:
-                print(f"Request failed with status code: {response.status_code}")
-                print(f"Response text: {response.text}")
+                error_message = f"Request failed with status code: {response.status_code}"
+                error_message += f"\nResponse text: {response.text}"
+                print(error_message)
 
             # If we've not returned by now, sleep before the next attempt
-            time.sleep(1)  # you may want to increase this value depending on the API
+            # you may want to increase this value depending on the API
+            time.sleep(1)
 
             # Increment the attempts counter
             attempts += 1
 
         # If we've exhausted all attempts and not returned, raise an error
         if attempts == MAX_ATTEMPTS:
-            print(f"Request failed with status code: {response.status_code}")
-            print(f"Response text: {response.text}")
-            raise Exception("Failed to get a valid response after 5 attempts")
+            error_message = f"Request failed with status code: {response.status_code}"
+            error_message += f"\nResponse text: {response.text}"
+            print(error_message)
+            exception_message = f"Failed to get a valid response after {MAX_ATTEMPTS} attempts"
+            error_message += "\n" + exception_message
+
+            self.agentops.record(result="Fail", returns={
+                "finish_reason": "Fail", "content": error_message})
+
+            raise Exception(exception_message)
+
+        self.agentops.record(result="Fail", returns={
+            "finish_reason": "Fail", "content": error_message})
 
     def get(self):
         if self.token is None and self.api_key is None:
@@ -326,9 +353,12 @@ class _Multion:
             except Exception as e:
                 print(f"ERROR: {e}")
         else:
-            print(f"Failed to close session. Status code: {response.status_code}")
+            print(
+                f"Failed to close session. Status code: {response.status_code}")
 
     def browse(self, data):
+        error_message = ""
+
         if self.token is None and self.api_key is None:
             raise Exception(
                 "You must log in or provide an API key before making API calls."
@@ -337,30 +367,42 @@ class _Multion:
         headers = self.set_headers()
         url = f"{self.api_url}/browse"
 
+        self.agentops.start_session()
+        self.agentops.current_event = Event(event_type="browse")
+
         try:
             response = requests.post(url, json=data, headers=headers)
         except requests.exceptions.RequestException as e:
-            print(f"Request failed due to an error: {e}")
+            error_message = f"Request failed due to an error: {e}"
+            print(error_message)
 
         if response.ok:  # checks if status_code is 200-400
             try:
-                return response.json()
+                response_json = response.json()
+                self.agentops.record(result="Success", returns={
+                    "finish_reason": "Success", "content": response_json}, screenshot=response_json["screenshot"])
+                return response_json
             except json.JSONDecodeError:
-                print("JSONDecodeError: The server didn't respond with valid JSON.")
+                error_message = "JSONDecodeError: The server didn't respond with valid JSON."
+                print(error_message)
 
         elif response.status_code == 401:  # token has expired
-            print("Invalid token. Refreshing...")
+            error_message = "Invalid token. Refreshing..."
+            print(error_message)
             self.refresh_token()  # Refresh the token
             # Update the authorization header
             headers["Authorization"] = f"Bearer {self.token['access_token']}"
         elif response.status_code == 404:  # server not connected
-            print(
-                """Server Disconnected. Please press connect in the
+            error_message = """Server Disconnected. Please press connect in the
                 Multion extension popup"""
-            )
+            print(error_message)
         else:
-            print(f"Request failed with status code: {response.status_code}")
-            print(f"Response text: {response.text}")
+            error_message = f"Request failed with status code: {response.status_code}"
+            error_message += f"\nResponse text: {response.text}"
+            print(error_message)
+
+        self.agentops.record(result="Fail", returns={
+            "finish_reason": "Fail", "content": error_message})
 
     def new_session(self, data):
         print(
@@ -373,6 +415,8 @@ class _Multion:
     def create_session(self, data):
         url = f"{self.api_url}/session"
         # print("running create session")
+        self.agentops.start_session()
+        self.agentops.current_event = Event(event_type="create_session")
         return self.post(url, data)
 
     # def update_session(self, sessionId, data):
@@ -386,16 +430,26 @@ class _Multion:
     def step_session(self, sessionId, data):
         url = f"{self.api_url}/session/{sessionId}"
         # print("session stepped")
+
+        self.agentops.current_event = Event(event_type="step_session")
         return self.post(url, data, canStream=True)
 
     def close_session(self, sessionId):
         url = f"{self.api_url}/session/{sessionId}"
         # print("session closed")
+        self.agentops.end_session(end_state="Success", video_url=f"{self.api_url}/sessionVideo/{sessionId}")
         return self.delete(url)
 
     def close_sessions(self):
         url = f"{self.api_url}/sessions"
         # print("all sessions closed")
+
+        # end all agentops sessions with state "Success"
+        active_sessions = self.list_sessions()
+        if "session_ids" in active_sessions:
+            for sessionId in active_sessions["session_ids"]:
+                self.agentops.end_session(end_state="Success", video_url=f"{self.api_url}/sessionVideo/{sessionId}")
+
         return self.delete(url)
 
     def list_sessions(self):
@@ -420,7 +474,8 @@ class _Multion:
         if self.token is not None and self.token["expires_at"] > time.time():
             return self.token
 
-        response = requests.get(f"{self.api_url}/get_token?client_id={self.client_id}")
+        response = requests.get(
+            f"{self.api_url}/get_token?client_id={self.client_id}")
         if response.status_code == 200:
             data = response.json()
             if "access_token" in data:
@@ -479,7 +534,6 @@ class _Multion:
         if height is not None and width is not None:
             new_dimensions = (width, height)  # width, height
             img = img.resize(new_dimensions, Image.LANCZOS)
-
         # Return the image
         return img
 
