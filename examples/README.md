@@ -6,8 +6,8 @@ This folder contains examples demonstrating the use of the MULTI-ON API.
    
 # Getting started Examples
 - [Multion_api_example.ipynb](https://github.com/MULTI-ON/api/blob/main/examples/Multion_api_example.ipynb): A Jupyter notebook demonstrating basic usage of the MULTI-ON API.
-- [langchain_example.ipynb](https://github.com/MULTI-ON/api/blob/main/examples/langchain_example.ipynb): A notebook showing how to get started with using the MultiOn LangChain integration.
-- [advanced_langchain_custom_tools.ipynb](https://github.com/MULTI-ON/api/blob/main/examples/advanced_langchain_custom_tools.ipynb): A notebook showing more advanced usage with LangChain.
+- 
+- [advanced_langchain_custom_tools.ipynb](https://github.com/MULTI-ON/api/blob/main/examples/advanced_langchain_custom_tools.ipynb): A notebook showing more advanced usage with LangChain by creating a custom tool.
 
    
 # Usage
