@@ -1,6 +1,6 @@
-# MultiOn Agent API: Next-Gen Web AI Agents 🚀
+# MultiOn Agent API: Web AI Agents 🚀
 
-👋 Welcome to the official GitHub repository of the MultiOn API. 
+👋 Welcome to the official GitHub repository of the MultiOn Agent API. 
 
 Unlock the next generation of web automation and build custom AI agents that can perform complex actions on the internet with just a few lines of code.
 
