@@ -13,10 +13,6 @@ Looking for Inspiration? Check out our [Examples](https://github.com/MULTI-ON/ap
 
 Need Help? Dive into the comprehensive [Docs](https://docs.multion.ai).
 
-## 📰 Media Coverage
-
-MultiOn has been featured in numerous [tech publications](https://www.reuters.com/technology/race-towards-autonomous-ai-agents-grips-silicon-valley-2023-07-17/) and has received positive reviews for its innovative approach to AI and web interactions. Our media coverage is a testament to our commitment to pushing the boundaries of what's possible with AI and the web.
-
 ## 🌟 Features
 - 🚀 **Effortless Web Automation**: Navigate, scrape, and manipulate the web with ease.
 - 🤖 **AI Agents**: Build and deploy custom AI applications for complex tasks.
