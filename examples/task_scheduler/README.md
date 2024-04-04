@@ -1,7 +1,7 @@
 # Introduction
 **MultiOn Task Scheduler Desktop App**
 
-You can add and schedule repetitive tasks that MultiOn will automatically execute in on your behalf everyday 🔥🚀
+You can add and schedule repetitive tasks that MultiOn will automatically execute in on your behalf everyday 🔥
 
 **Requires langchain >= 0.0.265**
 
