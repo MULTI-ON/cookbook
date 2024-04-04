@@ -12,7 +12,7 @@ This folder contains examples demonstrating the use of the MultiOn Agent API.
 To use these examples, clone the repository, install any necessary dependencies, and run the examples.
 
 # Contributing
-Contributions to the examples are encouraged. Please follow the contribution guidelines.
+Contributions to the examples are encouraged. Please follow the [Contribution Guidelines](https://github.com/MULTI-ON/api/blob/main/CONTRIBUTING.md).
 
 # Contact
 For any questions or help, please reach out to us on our [Discord](https://discord.gg/multion)
