@@ -23,7 +23,7 @@ Need Help? Dive into the comprehensive [Docs](https://docs.multion.ai).
 ## ⚙️ Use
 Our Agent API is designed with developers in mind, providing a seamless integration experience. Whether you're a seasoned developer or just starting out, you'll find our API easy to use and highly flexible. 
 
-We are continuously working on integrating with more toolkits to provide a versatile and robust platform for our developers. Please submit new Integrations [here](https://github.com/MULTI-ON/api/tree/main/examples)
+We are continuously working on integrating with more toolkits to provide a versatile and robust platform for our developers. Please submit new integrations [here](https://github.com/MULTI-ON/api/tree/main/examples).
 
 Join us in our journey and give us a star if you find our project useful!
 
@@ -35,7 +35,7 @@ If you have any questions or run into any issues, don't hesitate to reach out to
 
 ## 📚 Documentation
 
-For more advanced use-cases, and detailed explanations, please refer to our [Official Documentation](https://docs.multion.ai).
+For more advanced use cases, and detailed explanations, please refer to our [Official Documentation](https://docs.multion.ai).
 
 We're excited to see what you build with MultiOn Agent API!
 
