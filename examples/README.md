@@ -14,8 +14,5 @@ To use these examples, clone the repository, install any necessary dependencies,
 # Contributing
 Contributions to the examples are encouraged. Please follow the contribution guidelines.
 
-# License
-These examples are released under the MIT license.
-
 # Contact
 For any questions or help, please reach out to us on our [Discord](https://discord.gg/multion)
