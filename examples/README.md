@@ -2,7 +2,7 @@
 This folder contains examples demonstrating the use of the MultiOn Agent API.
 
 # Demos
- - [MultiOn Task Scheduler App](https://github.com/MULTI-ON/api/blob/main/examples/task_scheduler) : An demo AI Scheduler App that allow scheduling web tasks  that can run recurringly built using our Python SDK and LangChain integration (see [Tweet](https://x.com/DivGarg9/status/1692613026451542095?s=20)).
+ - [MultiOn Task Scheduler App](https://github.com/MULTI-ON/api/blob/main/examples/task_scheduler) : An demo AI Scheduler App that allow scheduling web tasks  that can run recurringly built using our Python SDK (see [Tweet](https://x.com/DivGarg9/status/1692613026451542095?s=20)).
    
 # Getting started Examples
 - [agent_api_example.ipynb](https://github.com/MULTI-ON/api/blob/main/examples/Multion_api_example.ipynb): A Jupyter notebook demonstrating basic usage of the MultiOn Agent API.
