@@ -5,7 +5,7 @@ MultiOn Agent API
 
 *👋 Welcome to the official GitHub repository of the MultiOn Agent API.*
 
-Unlock the next generation of web automation and build custom AI Applications capable of performing complex web actions with just a few lines of natural language using the MultiOn Agent API.
+Build custom AI Applications capable of performing complex web actions with just a few lines of natural language using the MultiOn Agent API.
 
 Featured in **TechCrunch**, **Hacker News**, and integrated with popular toolkits, MultiOn Agent API is rapidly becoming the go-to solution for developers worldwide for AI Agent automation.
 
