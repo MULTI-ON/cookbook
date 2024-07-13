@@ -5,6 +5,8 @@
   </a>
 </p>
 
+***MultiOn is the Motor Cortex layer for AI***, ***enabling autonomous Web actions using natural language***
+
 Enjoy our curated collection of examples and recipes for [MultiOn](https://www.multion.ai/api). Use these patterns to build your own Agentic applications. We're going to be shipping new examples weekly. Stay tuned!
 
 ## 🌟 Features
@@ -34,7 +36,7 @@ Some recipes use the Agent API in local mode, which requires the MultiOn Chrome 
 
 Looking for more resources to build with MultiOn agents? Check out these helpful links:
 
-- 📜 [MultiOn documentation](https://docs.multion.ai)
+- 📜 [MultiOn Docs](https://docs.multion.ai)
 - 🌐 [Community Discord](https://discord.com/invite/multion)
 
 ## Contributing
