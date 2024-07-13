@@ -7,6 +7,13 @@
 
 Enjoy our curated collection of examples and recipes for [MultiOn](https://www.multion.ai/api). Use these patterns to build your own Agentic applications. We're going to be shipping new examples weekly. Stay tuned!
 
+## 🌟 Features
+- 🚀 **Effortless Web Automation**: Navigate, scrape, and manipulate the web with ease.
+- 🤖 **AI Agents**: Build and deploy custom AI applications for complex tasks.
+- 🛠 **SDK Support**: Native Python and JavaScript SDKs available.
+- 💡 **Rich Ecosystem**: Seamlessly integrate with Crew AI, LangChain, LlamaIndex, and more.
+- 🌐 **Global Community**: Get support and collaborate with like-minded developers in our [Discord](https://discord.com/invite/multion).
+
 ## Prerequisites
 
 To make the most of the examples in this cookbook, you'll need an MultiOn account and API key (sign up [here](https://app.multion.ai)).
@@ -27,18 +34,14 @@ Some recipes use the Agent API in local mode, which requires the MultiOn Chrome 
 
 Looking for more resources to build with MultiOn agents? Check out these helpful links:
 
-- [MultiOn documentation](https://docs.multion.ai)
-- [MultiOn Discord community](https://discord.gg/multion)
+- 📜 [MultiOn documentation](https://docs.multion.ai)
+- 🌐 [Community Discord](https://discord.com/invite/multion)
 
 ## Contributing
 
-We welcome any contributions to the MultiOn Cookbook, whether it's submitting an idea, fixing a typo, adding a new guide, or improving an existing one.
-
-If you have ideas for new examples or guides, share them on the [issues page](https://github.com/MULTI-ON/cookbook/issues).
+We welcome any contributions to the MultiOn Cookbook, whether it's submitting an idea, fixing a typo, adding a new guide, or improving an existing one. If you have ideas for new examples or guides, share them on the [issues page](https://github.com/MULTI-ON/cookbook/issues).
 
 If you want to directly contribute code, you can fork the repository, make your changes, and submit a pull request.
-
-To avoid duplication of efforts, please review the existing issues and pull requests before contributing.
 
 Happy building! 🙌
 
