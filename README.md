@@ -27,10 +27,12 @@ Some recipes use the Agent API in local mode, which requires the MultiOn Chrome 
 ### Projects
 
 - [Internet of Agents](https://github.com/MULTI-ON/cookbook/tree/main/internet-of-agents) - deploy a swarm of web agents with MultiOn
+- [Coding Agent](https://github.com/MULTI-ON/cookbook/tree/main/coding-agent) - execute coding projects end-to-end using MultiOn Agents.
 
 ### Notebooks
 
 - [Scrape LinkedIn](https://github.com/MULTI-ON/cookbook/tree/main/scraping/scrape_linkedin.ipynb) - scrape LinkedIn with MultiOn
+- [Finding Accommodation](https://github.com/MULTI-ON/cookbook/tree/main/accommodation/accommodation.ipynb) - find and book accommodation on AirBnB using MultiOn
 
 ## Explore further
 
