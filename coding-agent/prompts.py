@@ -58,7 +58,7 @@ orchestrator_prompt = """**General**
         )
     - clarify <question>: Clarify something about the Task. Sometimes, there may be missing information, such as logins, api keys, or some requirements of the Task may be unclear. Use this Action to clarify things from the user by asking <question>. Use this sparingly. Try and make decisions yourself. Some examples of how you can use this:
         - clarify The Task mentions that I need to benchmark the Perplexity API. Could you provide your API Key?
-    - submit: The Task is completed and you are ready to submit the output (whatever the programmer has so far). This is end the execution. Only do this when you are completely sure.
+    - submit: The Task is completed and you are ready to submit the output (whatever the programmer has so far). This will end the execution. Only do this when you are completely sure.
 
 **Important Notes**
 

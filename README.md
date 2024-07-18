@@ -28,11 +28,15 @@ Some recipes use the Agent API in local mode, which requires the MultiOn Chrome 
 
 - [Internet of Agents](https://github.com/MULTI-ON/cookbook/tree/main/internet-of-agents) - deploy a swarm of web agents with MultiOn
 - [Coding Agent](https://github.com/MULTI-ON/cookbook/tree/main/coding-agent) - execute coding projects end-to-end using MultiOn Agents.
+- [Competitor Research](https://github.com/MULTI-ON/cookbook/tree/main/competitor-research) - use MultiOn Agents to do competitor analysis.
+- [Job Search](https://github.com/MULTI-ON/cookbook/tree/main/job-search) - use MultiOn Agents to find suitable jobs and apply to one.
 
 ### Notebooks
 
 - [Scrape LinkedIn](https://github.com/MULTI-ON/cookbook/tree/main/scraping/scrape_linkedin.ipynb) - scrape LinkedIn with MultiOn
 - [Finding Accommodation](https://github.com/MULTI-ON/cookbook/tree/main/accommodation/accommodation.ipynb) - find and book accommodation on AirBnB using MultiOn
+- [Restaurant Booking](https://github.com/MULTI-ON/cookbook/tree/main/restaurant-booking/restaurant_booking.ipynb) - find and book accommodation on AirBnB using MultiOn
+- [News Analysis](https://github.com/MULTI-ON/cookbook/tree/main/news-digest/news_digest.ipynb) - use MultiOn to scrape and analyze news articles.
 
 ## Explore further
 
