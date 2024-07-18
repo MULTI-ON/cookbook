@@ -6,7 +6,7 @@ if __name__ == "__main__":
         "MULTION_API_KEY",
     )
     out = analyst.run(
-        "We run a chip business that designs and manufactures AI-specific chips for mobile devices."
+        business_description="We run a chip business that designs and manufactures AI-specific chips for mobile devices."
     )
 
     print("The finished analysis is: ")

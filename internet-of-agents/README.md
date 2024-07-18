@@ -4,6 +4,8 @@ Spin up a swarm of AI Agents using MultiOn to accomplish tasks on the web 🚀
 
 ## How to run
 
+Prerequisite: Ensure that you have `poetry` installed: [https://python-poetry.org/docs/#installation](https://python-poetry.org/docs/#installation)
+
 1. Make sure that the MultiOn Chrome Extension is installed and enabled (for more details, see [here](https://docs.multion.ai/learn/browser-extension)).
 
 2. Create a .env file and store the following variables:

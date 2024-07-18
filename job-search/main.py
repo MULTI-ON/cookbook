@@ -5,7 +5,9 @@ if __name__ == "__main__":
         "OPENAI_API_KEY",
         "MULTION_API_KEY",
     )
-    out = agent.run("I am a recent cs grad with 2 internships. Help me find a SWE Job.")
+    out = agent.run(
+        user_info="I am a recent cs grad with 2 internships. Help me find a SWE Job."
+    )
 
     print(
         "I have finished the process of looking for and applying to suitable jobs. The final output is:"
