@@ -11,7 +11,7 @@ Enjoy our curated collection of examples and recipes for [MultiOn](https://www.m
 
 ## 🌟 Features
 - 🚀 **Effortless Web Automation**: Navigate, scrape, and manipulate the web with ease.
-- 🤖 **AI Agents**: Build and deploy custom AI applications for complex tasks.
+- 🤖 **AI Agents**: Build and deploy custom AI agents for complex tasks.
 - 🛠 **SDK Support**: Native Python and JavaScript SDKs available.
 - 💡 **Rich Ecosystem**: Seamlessly integrate with Crew AI, LangChain, LlamaIndex, and more.
 - 🌐 **Global Community**: Get support and collaborate with like-minded developers in our [Discord](https://discord.com/invite/multion).
