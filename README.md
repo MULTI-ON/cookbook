@@ -34,6 +34,7 @@ Some recipes use the Agent API in local mode, which requires the MultiOn Chrome 
 ### Notebooks
 
 - [Scrape LinkedIn](https://github.com/MULTI-ON/cookbook/tree/main/scraping/scrape_linkedin.ipynb) - scrape LinkedIn with MultiOn
+- [Recursively Scrape Hackernews](https://github.com/MULTI-ON/cookbook/tree/main/recursive-scraping/recursive_scraping.ipynb) - recursively scrape Hackernews posts and comments
 - [Finding Accommodation](https://github.com/MULTI-ON/cookbook/tree/main/accommodation/accommodation.ipynb) - find and book accommodation on AirBnB using MultiOn
 - [Restaurant Booking](https://github.com/MULTI-ON/cookbook/tree/main/restaurant-booking/restaurant_booking.ipynb) - find and book accommodation on AirBnB using MultiOn
 - [News Analysis](https://github.com/MULTI-ON/cookbook/tree/main/news-digest/news_digest.ipynb) - use MultiOn to scrape and analyze news articles.
