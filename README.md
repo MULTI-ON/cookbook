@@ -38,6 +38,8 @@ Some recipes use the Agent API in local mode, which requires the MultiOn Chrome 
 - [Finding Accommodation](https://github.com/MULTI-ON/cookbook/tree/main/accommodation/accommodation.ipynb) - find and book accommodation on AirBnB using MultiOn
 - [Restaurant Booking](https://github.com/MULTI-ON/cookbook/tree/main/restaurant-booking/restaurant_booking.ipynb) - find and book accommodation on AirBnB using MultiOn
 - [News Analysis](https://github.com/MULTI-ON/cookbook/tree/main/news-digest/news_digest.ipynb) - use MultiOn to scrape and analyze news articles.
+- [Personalized Travel Agent](https://github.com/MULTI-ON/cookbook/blob/main/personalized-travel-agent/mem0_travel_agent.ipynb) - Intelligent travel agent with MultiOn and [Mem0](https://mem0.ai)
+
 
 ## Explore further
 
