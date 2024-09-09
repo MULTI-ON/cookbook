@@ -30,6 +30,7 @@ Some recipes use the Agent API in local mode, which requires the MultiOn Chrome 
 - [Coding Agent](https://github.com/MULTI-ON/cookbook/tree/main/coding-agent) - execute coding projects end-to-end using MultiOn Agents.
 - [Competitor Research](https://github.com/MULTI-ON/cookbook/tree/main/competitor-research) - use MultiOn Agents to do competitor analysis.
 - [Job Search](https://github.com/MULTI-ON/cookbook/tree/main/job-search) - use MultiOn Agents to find suitable jobs and apply to one.
+- [Form Filling](https://github.com/MULTI-ON/cookbook/tree/main/form-filling) - use MultiOn to automate form filling tasks.
 
 ### Notebooks
 
