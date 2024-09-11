@@ -115,7 +115,7 @@ def parse_fields_from_message(message):
     if json_match:
         try:
             json_data = json.loads(json_match.group(0))
-            if 'fields' in json_data:
+            if 'filled_fields' in json_data:
                 return json_data['fields']
         except json.JSONDecodeError:
             pass
@@ -189,61 +189,57 @@ if __name__ == "__main__":
         structured_cv_data = get_structured_cv_data(cv_text, form_fields)
         print("Structured CV data:", json.dumps(structured_cv_data, indent=2))
 
-        # Scroll back to the top of the form
-        scroll = browse(session_id, "Scroll back up")
+        # Fill the form with structured CV data
+        fill_cmd = f"""
+        Fill the form fields using this data:
         
-        if scroll.get('status') == 'DONE':
-            # Fill the form with structured CV data
-            fill_cmd = f"""
-            Fill the form fields using this data:
-            {json.dumps(structured_cv_data, indent=2)}
-            For fields marked (USER TO FILL), leave them blank.
-            Respond with a JSON in this format:
-            {{
-                "status": "DONE" or "ASK_USER",
-                "filled_fields": [
-                    {{"name": "Field Name", "value": "Filled Value"}}
-                ],
-                "empty_fields": ["Field Name 1", "Field Name 2"]
-            }}
+        {json.dumps(structured_cv_data, indent=2)}
+        For fields marked (USER TO FILL), leave them blank.
+        Respond with a JSON in this format:
+        {{
+            "status": "DONE" or "ASK_USER",
+            "filled_fields": [
+                {{"name": "Field Name", "value": "Filled Value"}}
+            ],
+            "empty_fields": ["Field Name 1", "Field Name 2"]
+        }}
+        Show status ASK_USER and ask the user to fill the empty fields. And memorize the user input. 
+        """
+        fill = perform_action_with_retry(lambda: browse(session_id, fill_cmd))
+        print("Fill response:", json.dumps(fill, indent=2))
+
+        # If user input is needed, wait for 60 seconds
+        if fill.get('status') == 'ASK_USER':
+            print("Waiting for 60 seconds to allow user interaction...")
+            time.sleep(60)
+
+        # Check if all fields are filled correctly
+        check_cmd = """
+        Check all fields are filled correctly based on the recent user input. Respond with a JSON in this format:
+        {
+            "status": "DONE" or "ASK_USER",
+            "empty_fields": ["Field Name 1", "Field Name 2"] if any
+        }
+        """
+        check = perform_action_with_retry(lambda: browse(session_id, check_cmd))
+        print("Check response:", json.dumps(check, indent=2))
+
+        if check.get('status') == 'DONE':
+            # Submit the form
+            submit_cmd = """
+            Submit the form and wait for confirmation. Respond with: SUBMITTED}
             """
-            fill = perform_action_with_retry(lambda: browse(session_id, fill_cmd))
-            print("Fill response:", json.dumps(fill, indent=2))
+            submit = perform_action_with_retry(lambda: browse(session_id, submit_cmd))
+            print("Submit response:", json.dumps(submit, indent=2))
 
-            # If user input is needed, wait for 60 seconds
-            if fill.get('status') == 'ASK_USER':
-                print("Waiting for 60 seconds to allow user interaction...")
-                time.sleep(60)
-
-            # Check if all fields are filled correctly
-            check_cmd = """
-            Check all fields are filled correctly. Respond with a JSON in this format:
-            {
-                "status": "DONE" or "ASK_USER",
-                "empty_fields": ["Field Name 1", "Field Name 2"] if any
-            }
-            """
-            check = perform_action_with_retry(lambda: browse(session_id, check_cmd))
-            print("Check response:", json.dumps(check, indent=2))
-
-            if check.get('status') == 'DONE':
-                # Submit the form
-                submit_cmd = """
-                Submit the form and wait for confirmation. Respond with: SUBMITTED}
-                """
-                submit = perform_action_with_retry(lambda: browse(session_id, submit_cmd))
-                print("Submit response:", json.dumps(submit, indent=2))
-
-                if submit.get('status') == 'DONE':
-                    print("Form submitted successfully!")
-                else:
-                    print(f"Error: Form submission failed. Status: {submit.get('status')}")
-            elif check.get('status') == 'ASK_USER':
-                print("Some fields are still empty. Please fill them manually.")
+            if submit.get('status') == 'DONE':
+                print("Form submitted successfully!")
             else:
-                print(f"Unexpected status: {check.get('status')}")
+                print(f"Error: Form submission failed. Status: {submit.get('status')}")
+        elif check.get('status') == 'ASK_USER':
+            print("Some fields are still empty. Please fill them manually.")
         else:
-            print(f"Error: Failed to scroll to the top of the form. Status: {scroll.get('status')}")
+            print(f"Unexpected status: {check.get('status')}")
     else:
         print(f"Error: Failed to get form fields. Status: {response.get('status')}")
 

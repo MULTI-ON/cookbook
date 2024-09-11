@@ -5,8 +5,12 @@ This Python script automates submitting a CV (resume) to an online form. It read
 This example demonstrates direct interaction with the API endpoints. Alternatively, you can use the MultiOn SDK in your preferred programming language. For more information, refer to the [MultiOn Quickstart](https://docs.multion.ai/quick-start) documentation.
 
 <div style="width: 100%; height: 0; padding-bottom: 56.25%; position: relative;">
-  <img src="demo.gif" alt="Form Filling Demo" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;">
+  <a href="https://drive.google.com/file/d/1o83ADOST3pN4xHke44ITth1nJ4P9gk3L/view?usp=sharing" target="_blank">
+    <img src="demo.gif" alt="Form Filling Demo" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;">
+  </a>
 </div>
+
+Click on the gif above to view the full video demonstration.
 
 ## MultiOn Documentation
 
